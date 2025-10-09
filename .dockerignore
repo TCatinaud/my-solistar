@@ -1,0 +1,10 @@
+**/.git
+**/.gitignore
+**/node_modules
+**/vendor
+**/var/cache
+**/var/log
+**/.env.local
+**/.DS_Store
+**/dist
+
