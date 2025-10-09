@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Base de données MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: home_energy_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: home_energy
+      MYSQL_USER: homeenergy
+      MYSQL_PASSWORD: homeenergy
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+    networks:
+      - home_energy_network
+
+  # PHP pour Symfony
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: home_energy_php
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+    networks:
+      - home_energy_network
+    depends_on:
+      - mysql
+
+  # Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: home_energy_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/backend
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - home_energy_network
+    depends_on:
+      - php
+
+  # phpMyAdmin (optionnel, pour faciliter la gestion de la DB)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: home_energy_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+    networks:
+      - home_energy_network
+    depends_on:
+      - mysql
+
+networks:
+  home_energy_network:
+    driver: bridge

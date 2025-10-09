@@ -1,0 +1,16 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.swp
+*.swo
+*~
+
+# Environment
+.env.local
+.env.*.local
+
+# Docker
+docker/mysql/data/
+
