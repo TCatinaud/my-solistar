@@ -8,9 +8,19 @@
 *~
 
 # Environment
+.env
 .env.local
 .env.*.local
 
-# Docker
-docker/mysql/data/
+# Next.js
+.next/
+out/
+node_modules/
+
+# Data (non versionné)
+data/
+
+# Docker (ancien)
+docker/
+docker-compose.yml
 
