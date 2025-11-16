@@ -187,8 +187,7 @@ export const scrapeHeatingData = async (
       fs.mkdirSync(dataDir, { recursive: true })
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const filePath = path.resolve(dataDir, `heating-${timestamp}.json`)
+    const filePath = path.resolve(dataDir, `heating.json`)
     fs.writeFileSync(filePath, JSON.stringify(serverData, null, 2))
 
     return serverData
