@@ -50,13 +50,18 @@ Ce guide vous explique comment déployer l'application Home Energy sur un NAS Sy
 
 ### 4. Configuration des variables d'environnement
 
-1. Créez le fichier `.env.local` :
+1. Créez le fichier `.env` :
    ```bash
-   nano .env.local
+   nano .env
    ```
 
-2. Ajoutez vos identifiants :
+2. Ajoutez vos identifiants et coordonnées :
    ```
+   # Coordonnées GPS pour l'application météo
+   WEATHER_LATITUDE=48.8566
+   WEATHER_LONGITUDE=2.3522
+
+   # Identifiants SOLISTAR
    SOLISTAR_ID=votre-email@example.com
    SOLISTAR_PASSWORD=votre-mot-de-passe
    ```
@@ -208,6 +213,6 @@ chmod -R 755 /volume1/web/home-energy
 ## Notes importantes
 
 - Le dossier `data/` contient les fichiers JSON historiques et ne doit pas être versionné
-- Le fichier `.env.local` contient des informations sensibles et ne doit jamais être commité
+- Le fichier `.env` contient des informations sensibles et ne doit jamais être commité
 - Assurez-vous que le NAS a suffisamment d'espace disque pour stocker l'historique
 - Pour des performances optimales, utilisez un SSD si possible

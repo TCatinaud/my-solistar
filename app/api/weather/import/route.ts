@@ -25,9 +25,9 @@ interface WeatherData {
   };
 }
 
-// Coordonnées par défaut (à adapter selon votre localisation)
-const DEFAULT_LATITUDE = 48.8566; // Paris
-const DEFAULT_LONGITUDE = 2.3522;
+// Coordonnées par défaut depuis les variables d'environnement
+const DEFAULT_LATITUDE = parseFloat(process.env.WEATHER_LATITUDE || "44.3791389465332");
+const DEFAULT_LONGITUDE = parseFloat(process.env.WEATHER_LONGITUDE || "2.5693840980529785");
 
 const getDaysInMonth = (year: number, month: number): number => {
   return new Date(year, month, 0).getDate();
@@ -156,20 +156,62 @@ export async function POST(request: NextRequest) {
       const hour = date.getHours();
       const minute = date.getMinutes();
 
-      // Garder uniquement les données à 00:00 et 00:30 (comme pour les données solistar)
-      if (minute !== 0 && minute !== 30) continue;
-
-      const timeSlot = formatTimeSlot(hour, minute);
-
+      // L'API fournit des données toutes les heures, on crée deux créneaux par heure
+      // Créneau à l'heure complète (00)
+      const timeSlot00 = formatTimeSlot(hour, 0);
       if (!weatherData[day]) {
         weatherData[day] = {};
       }
 
-      (weatherData[day] as any)[timeSlot] = {
+      (weatherData[day] as any)[timeSlot00] = {
         temperature: temperature_2m?.[i] ?? null,
         windSpeed: wind_speed_10m?.[i] ?? null,
         windDirection: wind_direction_10m?.[i] ?? null,
-        sunshineDuration: sunshine_duration?.[i] ?? null, // Peut être null si non disponible
+        sunshineDuration: sunshine_duration?.[i] ?? null,
+      };
+
+      // Créneau à la demi-heure (30) - utiliser la moyenne entre l'heure actuelle et la suivante
+      const timeSlot30 = formatTimeSlot(hour, 30);
+      const nextIndex = i + 1;
+      const nextTemp = temperature_2m?.[nextIndex];
+      const nextWindSpeed = wind_speed_10m?.[nextIndex];
+      const nextWindDirection = wind_direction_10m?.[nextIndex];
+      const nextSunshine = sunshine_duration?.[nextIndex];
+
+      const currentTemp = temperature_2m?.[i];
+      const currentWindSpeed = wind_speed_10m?.[i];
+      const currentWindDirection = wind_direction_10m?.[i];
+      const currentSunshine = sunshine_duration?.[i];
+
+      // Calculer la moyenne pour la demi-heure, ou utiliser la valeur actuelle si la suivante n'existe pas
+      (weatherData[day] as any)[timeSlot30] = {
+        temperature:
+          currentTemp !== null && currentTemp !== undefined
+            ? nextTemp !== null && nextTemp !== undefined
+              ? (currentTemp + nextTemp) / 2
+              : currentTemp
+            : null,
+        windSpeed:
+          currentWindSpeed !== null && currentWindSpeed !== undefined
+            ? nextWindSpeed !== null && nextWindSpeed !== undefined
+              ? (currentWindSpeed + nextWindSpeed) / 2
+              : currentWindSpeed
+            : null,
+        windDirection:
+          currentWindDirection !== null && currentWindDirection !== undefined
+            ? nextWindDirection !== null && nextWindDirection !== undefined
+              ? // Pour la direction du vent, gérer le cas où on passe de 359° à 0°
+                Math.abs(nextWindDirection - currentWindDirection) > 180
+                ? ((currentWindDirection + nextWindDirection + 360) / 2) % 360
+                : (currentWindDirection + nextWindDirection) / 2
+              : currentWindDirection
+            : null,
+        sunshineDuration:
+          currentSunshine !== null && currentSunshine !== undefined
+            ? nextSunshine !== null && nextSunshine !== undefined
+              ? (currentSunshine + nextSunshine) / 2
+              : currentSunshine
+            : null,
       };
     }
 

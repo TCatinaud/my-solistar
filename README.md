@@ -41,11 +41,17 @@ yarn playwright install chromium
 1. Copiez le fichier d'exemple :
 
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
 
-2. Modifiez `.env.local` avec vos identifiants :
+2. Modifiez `.env` avec vos identifiants et coordonnées :
+
    ```
+   # Coordonnées GPS pour l'application météo
+   WEATHER_LATITUDE=48.8566
+   WEATHER_LONGITUDE=2.3522
+
+   # Identifiants SOLISTAR
    SOLISTAR_ID=votre-email@example.com
    SOLISTAR_PASSWORD=votre-mot-de-passe
    ```
@@ -78,7 +84,7 @@ home-energy/
 ├── scripts/
 │   └── scrape-heating.ts         # Script Playwright pour le scraping
 ├── data/                         # Dossier pour les données (non versionné)
-├── .env.local                    # Variables d'environnement (non versionné)
+├── .env                           # Variables d'environnement (non versionné)
 ├── .env.example                  # Exemple de variables d'environnement
 └── package.json
 ```
@@ -172,7 +178,7 @@ Consultez le fichier [SYNOLOGY.md](./SYNOLOGY.md) pour les instructions détaill
 
 ### L'application ne récupère pas les données
 
-1. Vérifiez que les identifiants dans `.env.local` sont corrects
+1. Vérifiez que les identifiants dans `.env` sont corrects
 2. Vérifiez que Playwright est installé : `yarn playwright install chromium`
 3. Consultez les logs de la console pour plus de détails
 
