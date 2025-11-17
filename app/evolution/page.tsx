@@ -17,8 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,6 +38,7 @@ interface EvolutionDataPoint {
   tankSolar?: number;
   tankAdditional?: number;
   boiler?: number;
+  boilerActive?: boolean;
 }
 
 interface EvolutionResponse {
@@ -50,6 +52,7 @@ interface EvolutionResponse {
     tankSolar: boolean;
     tankAdditional: boolean;
     boiler: boolean;
+    boilerActive: boolean;
   };
 }
 
@@ -106,6 +109,7 @@ export default function EvolutionPage() {
     tankSolar: false,
     tankAdditional: false,
     boiler: false,
+    boilerActive: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +122,7 @@ export default function EvolutionPage() {
     tankSolar: boolean;
     tankAdditional: boolean;
     boiler: boolean;
+    boilerActive: boolean;
   }>({
     hotSensor: true,
     coldSensor: true,
@@ -127,6 +132,7 @@ export default function EvolutionPage() {
     tankSolar: true,
     tankAdditional: true,
     boiler: true,
+    boilerActive: true,
   });
 
   // Charger la liste des mois disponibles
@@ -180,7 +186,12 @@ export default function EvolutionPage() {
       }
 
       const result: EvolutionResponse = await response.json();
-      setData(result.data);
+      // Transformer les données booléennes en nombres pour les barres (100% = actif, 0% = inactif)
+      const transformedData = result.data.map((point) => ({
+        ...point,
+        boilerActive: point.boilerActive !== undefined ? (point.boilerActive ? 100 : 0) : undefined,
+      }));
+      setData(transformedData);
       setAvailableSeries(result.availableSeries);
       // Réinitialiser la visibilité des séries en fonction de celles disponibles
       setVisibleSeries({
@@ -192,6 +203,7 @@ export default function EvolutionPage() {
         tankSolar: result.availableSeries.tankSolar,
         tankAdditional: result.availableSeries.tankAdditional,
         boiler: result.availableSeries.boiler,
+        boilerActive: result.availableSeries.boilerActive,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
@@ -226,6 +238,7 @@ export default function EvolutionPage() {
     tankSolar: "#06b6d4", // cyan
     tankAdditional: "#f97316", // orange
     boiler: "#84cc16", // lime
+    boilerActive: "#22c55e", // green
   };
 
   const seriesLabels = {
@@ -237,6 +250,7 @@ export default function EvolutionPage() {
     tankSolar: "Ballon solaire",
     tankAdditional: "Ballon appoint",
     boiler: "Chaudière",
+    boilerActive: "Activation chaudière",
   };
 
   return (
@@ -360,7 +374,7 @@ export default function EvolutionPage() {
             <CardContent>
               <div className="h-[600px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
+                  <ComposedChart
                     data={data}
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
@@ -383,10 +397,15 @@ export default function EvolutionPage() {
                       labelFormatter={(value) =>
                         formatTimestamp(value as string)
                       }
-                      formatter={(value: number) => [
-                        `${value.toFixed(1)} °C`,
-                        "",
-                      ]}
+                      formatter={(value: number | boolean, name: string) => {
+                        if (name === "boilerActive") {
+                          return [value === 100 ? "On" : "Off", ""];
+                        }
+                        if (typeof value === "number") {
+                          return [`${value.toFixed(1)} °C`, ""];
+                        }
+                        return [String(value), ""];
+                      }}
                     />
                     <Legend
                       content={({ payload }) => (
@@ -402,6 +421,7 @@ export default function EvolutionPage() {
                               [seriesLabels.tankSolar]: "tankSolar",
                               [seriesLabels.tankAdditional]: "tankAdditional",
                               [seriesLabels.boiler]: "boiler",
+                              [seriesLabels.boilerActive]: "boilerActive",
                             };
                             const dataKeyStr = String(entry.dataKey);
                             const mappedKey =
@@ -440,6 +460,16 @@ export default function EvolutionPage() {
                         </div>
                       )}
                     />
+                    {availableSeries.boilerActive && (
+                      <Bar
+                        dataKey="boilerActive"
+                        fill={seriesColors.boilerActive}
+                        name={seriesLabels.boilerActive}
+                        hide={!visibleSeries.boilerActive}
+                        fillOpacity={visibleSeries.boilerActive ? 0.5 : 0}
+                        isAnimationActive={false}
+                      />
+                    )}
                     {availableSeries.hotSensor && (
                       <Line
                         type="monotone"
@@ -536,7 +566,7 @@ export default function EvolutionPage() {
                         strokeOpacity={visibleSeries.boiler ? 1 : 0}
                       />
                     )}
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>

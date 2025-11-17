@@ -59,6 +59,7 @@ interface EvolutionDataPoint {
   tankSolar?: number;
   tankAdditional?: number;
   boiler?: number;
+  boilerActive?: boolean;
 }
 
 interface EvolutionResponse {
@@ -72,6 +73,7 @@ interface EvolutionResponse {
     tankSolar: boolean;
     tankAdditional: boolean;
     boiler: boolean;
+    boilerActive: boolean;
   };
 }
 
@@ -112,7 +114,10 @@ type DayDataSolistar = {
       solar: number;
       additional: number;
     };
-    boiler: number;
+    boiler: {
+      active: boolean;
+      temperature: number;
+    };
     thermometer: {
       outdoor: number;
       indoor: number;
@@ -269,7 +274,8 @@ export async function GET(request: NextRequest) {
               point.outdoorTemp = dayData[timeSlot].thermometer?.outdoor;
               point.tankSolar = dayData[timeSlot].tank?.solar;
               point.tankAdditional = dayData[timeSlot].tank?.additional;
-              point.boiler = dayData[timeSlot].boiler;
+              point.boiler = dayData[timeSlot].boiler?.temperature;
+              point.boilerActive = dayData[timeSlot].boiler?.active;
             }
           }
 
@@ -299,6 +305,7 @@ export async function GET(request: NextRequest) {
         tankSolar: checkSeriesCompleteness(dataPoints, "tankSolar"),
         tankAdditional: checkSeriesCompleteness(dataPoints, "tankAdditional"),
         boiler: checkSeriesCompleteness(dataPoints, "boiler"),
+        boilerActive: checkSeriesCompleteness(dataPoints, "boilerActive"),
       };
 
       // Filtrer les points qui n'ont aucune donnée
@@ -311,7 +318,8 @@ export async function GET(request: NextRequest) {
           point.weatherTemp !== undefined ||
           point.tankSolar !== undefined ||
           point.tankAdditional !== undefined ||
-          point.boiler !== undefined
+          point.boiler !== undefined ||
+          point.boilerActive !== undefined
       );
 
       const response: EvolutionResponse = {
@@ -364,7 +372,8 @@ export async function GET(request: NextRequest) {
               point.outdoorTemp = dayData[timeSlot].thermometer?.outdoor;
               point.tankSolar = dayData[timeSlot].tank?.solar;
               point.tankAdditional = dayData[timeSlot].tank?.additional;
-              point.boiler = dayData[timeSlot].boiler;
+              point.boiler = dayData[timeSlot].boiler?.temperature;
+              point.boilerActive = dayData[timeSlot].boiler?.active;
             }
           }
 
@@ -389,7 +398,8 @@ export async function GET(request: NextRequest) {
             point.weatherTemp !== undefined ||
             point.tankSolar !== undefined ||
             point.tankAdditional !== undefined ||
-            point.boiler !== undefined
+            point.boiler !== undefined ||
+          point.boilerActive !== undefined
           ) {
             dataPoints.push(point);
           }
@@ -406,6 +416,7 @@ export async function GET(request: NextRequest) {
         tankSolar: checkSeriesCompleteness(dataPoints, "tankSolar"),
         tankAdditional: checkSeriesCompleteness(dataPoints, "tankAdditional"),
         boiler: checkSeriesCompleteness(dataPoints, "boiler"),
+        boilerActive: checkSeriesCompleteness(dataPoints, "boilerActive"),
       };
 
       const response: EvolutionResponse = {

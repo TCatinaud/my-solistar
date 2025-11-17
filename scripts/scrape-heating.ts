@@ -19,7 +19,10 @@ interface HeatingData {
       min: number
       confort: number
     }
-    boiler: number
+    boiler: {
+      active: boolean
+      temperature: number
+    }
     radiator: {
       inlet: number
       outlet: number
@@ -152,6 +155,9 @@ export const scrapeHeatingData = async (
     const t11 = page.locator("#temp-valeur-11")
     const t11Text = (await t11.textContent()) || ""
 
+    const boilerActive = page.locator("#chaudiere-1-label")
+    const boilerActiveText = (await boilerActive.textContent()) || ""
+
     const serverData: HeatingData = {
       date: new Date(),
       data: {
@@ -166,7 +172,10 @@ export const scrapeHeatingData = async (
           min: formatData(ecsMinScript),
           confort: formatData(ecsConfortScript),
         },
-        boiler: formatData(t6Text),
+        boiler: {
+          active: boilerActiveText === "On",
+          temperature: formatData(t6Text),
+        },
         radiator: {
           inlet: formatData(t8Text),
           outlet: formatData(t7Text),

@@ -24,7 +24,10 @@ interface HeatingData {
       min: number;
       confort: number;
     };
-    boiler: number;
+    boiler: {
+      active: boolean;
+      temperature: number;
+    };
     radiator: {
       inlet: number;
       outlet: number;
@@ -209,10 +212,16 @@ export default function Home() {
             <CardTitle>Chaudière</CardTitle>
             <CardDescription>Température de la chaudière</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Statut</span>
+              <Badge variant={data.data.boiler.active ? "default" : "outline"}>
+                {data.data.boiler.active ? "On" : "Off"}
+              </Badge>
+            </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Température</span>
-              <span className="text-2xl font-bold">{data.data.boiler} °C</span>
+              <span className="text-2xl font-bold">{data.data.boiler.temperature} °C</span>
             </div>
           </CardContent>
         </Card>

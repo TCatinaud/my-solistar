@@ -18,6 +18,7 @@ interface CSVRow {
   SOL: string
   APP: string
   TconsECS: string
+  chdr1: string
   Tcons1: string
 }
 
@@ -34,7 +35,10 @@ interface DayData {
       min: number
       confort: number
     }
-    boiler: number
+    boiler: {
+      active: boolean
+      temperature: number
+    }
     radiator: {
       inlet: number
       outlet: number
@@ -81,6 +85,7 @@ const parseCSV = (csvContent: string): CSVRow[] => {
     "SOL",
     "APP",
     "TconsECS",
+    "chdr1",
     "Tcons1",
   ]
 
@@ -137,6 +142,11 @@ const parseNumber = (value: string): number => {
   return isNaN(num) ? 0 : num
 }
 
+const parseBoilerActive = (value: string): boolean => {
+  const num = parseNumber(value)
+  return num === 100 // 100 = active, 0 = inactive
+}
+
 const determineOrigin = (sol: string, app: string): string => {
   const solValue = parseInt(sol) || 0
   const appValue = parseInt(app) || 0
@@ -178,7 +188,10 @@ const filterAndGroupData = (rows: CSVRow[]): ProcessedData => {
         min: parseNumber(row.TconsECS),
         confort: parseNumber(row.TconsECS), // Utiliser TconsECS pour les deux (à ajuster si nécessaire)
       },
-      boiler: parseNumber(row.TpoeleB),
+      boiler: {
+        active: parseBoilerActive(row.chdr1),
+        temperature: parseNumber(row.TpoeleB),
+      },
       radiator: {
         inlet: parseNumber(row.TdepC),
         outlet: parseNumber(row.TretC),
