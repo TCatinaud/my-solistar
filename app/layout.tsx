@@ -27,9 +27,14 @@ export default function RootLayout({
             >
               Solar Home
             </Link>
-            <Link href="/import">
-              <Button variant="outline">Import</Button>
-            </Link>
+            <nav className="flex items-center gap-4">
+              <Link href="/evolution">
+                <Button variant="outline">Évolution</Button>
+              </Link>
+              <Link href="/import">
+                <Button variant="outline">Import</Button>
+              </Link>
+            </nav>
           </div>
         </header>
         {children}
