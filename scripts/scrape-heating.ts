@@ -1,5 +1,5 @@
 import puppeteer, { type Browser, type Page } from "puppeteer-core"
-import chromium from "@sparticuz/chromium"
+import chromium from "@sparticuz/chromium-min"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -64,9 +64,16 @@ export const scrapeHeatingData = async (
     let args: string[]
 
     if (isServerless) {
-      // Sur Vercel/AWS Lambda, utiliser @sparticuz/chromium
-      executablePath = await chromium.executablePath()
-      args = chromium.args
+      // Sur Vercel/AWS Lambda, utiliser @sparticuz/chromium-min
+      try {
+        executablePath = await chromium.executablePath()
+        args = chromium.args
+      } catch (error) {
+        console.error("Error getting chromium executable path:", error)
+        throw new Error(
+          `Impossible de charger Chromium pour Vercel. Erreur: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
     } else {
       // En développement local, utiliser Chrome installé localement
       if (process.platform === "win32") {

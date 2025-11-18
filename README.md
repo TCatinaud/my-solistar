@@ -8,7 +8,7 @@ Application Next.js simple et moderne pour récupérer et afficher les données 
 - **TypeScript** - Typage statique
 - **Shadcn UI** - Composants UI modernes
 - **Tailwind CSS** - Framework CSS utility-first
-- **Puppeteer Core + @sparticuz/chromium** - Scraping web automatisé (optimisé pour Vercel serverless)
+- **Puppeteer Core + @sparticuz/chromium-min** - Scraping web automatisé (optimisé pour Vercel serverless, version minimale)
 - **Clerk** - Authentification et gestion des utilisateurs
 
 ## 📋 Prérequis
@@ -33,7 +33,7 @@ yarn install
 
 ### 3. Configuration du navigateur
 
-- **En production (Vercel)** : Le navigateur Chromium est automatiquement fourni par `@sparticuz/chromium` (optimisé pour les fonctions serverless, ~50MB)
+- **En production (Vercel)** : Le navigateur Chromium est automatiquement fourni par `@sparticuz/chromium-min` (version minimale optimisée pour les fonctions serverless, ~40MB)
 - **En développement local** : Vous devez avoir Google Chrome installé sur votre machine. Le script utilisera automatiquement Chrome local.
 
 ### 4. Configuration des variables d'environnement
@@ -98,7 +98,7 @@ home-energy/
 ├── lib/
 │   └── utils.ts                  # Utilitaires (cn function)
 ├── scripts/
-│   └── scrape-heating.ts         # Script Puppeteer Core + @sparticuz/chromium pour le scraping
+│   └── scrape-heating.ts         # Script Puppeteer Core + @sparticuz/chromium-min pour le scraping
 ├── data/                         # Dossier pour les données (non versionné)
 ├── .env                           # Variables d'environnement (non versionné)
 ├── .env.example                  # Exemple de variables d'environnement
@@ -130,7 +130,7 @@ L'application récupère automatiquement les données suivantes depuis my.solisa
 
 ### GET `/api/heating`
 
-Récupère les données actuelles en exécutant le scraping avec Puppeteer Core et @sparticuz/chromium (optimisé pour Vercel).
+Récupère les données actuelles en exécutant le scraping avec Puppeteer Core et @sparticuz/chromium-min (version minimale optimisée pour Vercel).
 
 **Authentification requise** : Oui
 
@@ -218,7 +218,7 @@ Les routes d'import (`/api/import` et `/api/weather/import`) sont protégées pa
 
 1. Vérifiez que les identifiants dans `.env` sont corrects
 2. **En développement local** : Assurez-vous que Google Chrome est installé sur votre machine
-3. **En production (Vercel)** : Le navigateur est automatiquement fourni par `@sparticuz/chromium`
+3. **En production (Vercel)** : Le navigateur est automatiquement fourni par `@sparticuz/chromium-min` (version minimale)
 4. Consultez les logs de la console pour plus de détails
 
 ### Erreurs de permissions
@@ -238,10 +238,11 @@ chmod -R 755 data
 - Sur Windows : `C:\Program Files\Google\Chrome\Application\chrome.exe`
 
 **En production (Vercel) :**
-- Le navigateur est automatiquement fourni par `@sparticuz/chromium` (version optimisée pour serverless)
+- Le navigateur est automatiquement fourni par `@sparticuz/chromium-min` (version minimale optimisée pour serverless)
 - Aucune installation manuelle nécessaire
-- Compatible avec le plan gratuit de Vercel (limite de 50MB respectée)
+- Compatible avec le plan gratuit de Vercel (limite de 50MB respectée, version minimale ~40MB)
 - Si vous rencontrez des erreurs, vérifiez que la variable d'environnement `VERCEL` est bien définie
+- Les packages sont configurés comme `serverExternalPackages` dans `next.config.js` pour une meilleure compatibilité
 
 ## 📄 Licence
 

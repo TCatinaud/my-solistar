@@ -590,10 +590,10 @@
   resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.25.24.tgz#8c7688559979f7079aacaf31aa881c3aa410b718"
   integrity sha512-XJfwUVUKDHF5ugKwIcxEgc9k8b7HbznCp6eUfWgu710hMPNIO4aw4/zB5RogDQz8nd6gyCDpU9O/m6qYEWY6yQ==
 
-"@sparticuz/chromium@^141.0.0":
+"@sparticuz/chromium-min@^141.0.0":
   version "141.0.0"
-  resolved "https://registry.yarnpkg.com/@sparticuz/chromium/-/chromium-141.0.0.tgz#c8bb81181135e622723a15efdaf1fe83af555a04"
-  integrity sha512-JsTp4AqgStkqKki4dUpEM0GoisAjQhsqZ1lQTNMSKK5A9pw6BbIuIvv2HVYMYzSZGyDdQNJYBPPDg2eggCkezA==
+  resolved "https://registry.yarnpkg.com/@sparticuz/chromium-min/-/chromium-min-141.0.0.tgz#32e284027c463a241a8394db83cea89d34bd421b"
+  integrity sha512-1EAR1NBrY4sa0hysDUCxCSI+9xc88/LYB3YjWFqMMu3CF82ATp8FzOeu7icwGxI02NAPcwzb0Uf1kIzsfH7Eiw==
   dependencies:
     follow-redirects "^1.15.11"
     tar-fs "^3.1.1"

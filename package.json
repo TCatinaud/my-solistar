@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.35.2",
-    "@sparticuz/chromium": "^141.0.0",
+    "@sparticuz/chromium-min": "^141.0.0",
     "autoprefixer": "^10.4.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
