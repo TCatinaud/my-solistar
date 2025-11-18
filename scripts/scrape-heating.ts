@@ -1,4 +1,5 @@
-import puppeteer, { type Browser, type Page } from "puppeteer"
+import puppeteer, { type Browser, type Page } from "puppeteer-core"
+import chromium from "@sparticuz/chromium"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -56,9 +57,33 @@ export const scrapeHeatingData = async (
   let browser: Browser | null = null
 
   try {
+    // Utiliser Chromium optimisé pour serverless sur Vercel, ou Chrome local en développement
+    const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME
+    
+    let executablePath: string
+    let args: string[]
+
+    if (isServerless) {
+      // Sur Vercel/AWS Lambda, utiliser @sparticuz/chromium
+      executablePath = await chromium.executablePath()
+      args = chromium.args
+    } else {
+      // En développement local, utiliser Chrome installé localement
+      if (process.platform === "win32") {
+        executablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      } else if (process.platform === "darwin") {
+        executablePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      } else {
+        executablePath = "/usr/bin/google-chrome-stable"
+      }
+      args = ["--no-sandbox", "--disable-setuid-sandbox"]
+    }
+
     browser = await puppeteer.launch({
+      args,
+      defaultViewport: { width: 1280, height: 720 },
+      executablePath,
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     })
 
     const page: Page = await browser.newPage()
