@@ -6,26 +6,29 @@ import * as path from "path";
 
 export const dynamic = "force-dynamic";
 
-interface WeatherData {
+type DayData = {
+  [timeSlot: string]: {
+    temperature: number;
+    windSpeed: number;
+    windDirection: number;
+    sunshineDuration: number;
+    shortwaveRadiation?: number;
+  };
+};
+
+type WeatherDataDays = {
+  [day: string]: DayData | undefined;
+};
+
+type WeatherMetadata = {
   _metadata?: {
     importedAt: string;
     latitude: number;
     longitude: number;
   };
-  [day: string]: {
-    [timeSlot: string]: {
-      temperature: number;
-      windSpeed: number;
-      windDirection: number;
-      sunshineDuration: number;
-      shortwaveRadiation?: number;
-    };
-  } | {
-    importedAt?: string;
-    latitude?: number;
-    longitude?: number;
-  };
-}
+};
+
+type WeatherData = WeatherDataDays & WeatherMetadata;
 
 // Coordonnées par défaut depuis les variables d'environnement
 const DEFAULT_LATITUDE = parseFloat(process.env.WEATHER_LATITUDE || "44.3791389465332");

@@ -30,7 +30,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-interface EvolutionDataPoint {
+type EvolutionDataPoint = {
   timestamp: string;
   hotSensor?: number;
   coldSensor?: number;
@@ -41,9 +41,13 @@ interface EvolutionDataPoint {
   tankAdditional?: number;
   boiler?: number;
   boilerActive?: boolean;
-}
+};
 
-interface EvolutionResponse {
+type ChartDataPoint = Omit<EvolutionDataPoint, "boilerActive"> & {
+  boilerActive?: number; // Transformé en nombre pour les barres (100 = actif, 0 = inactif)
+};
+
+type EvolutionResponse = {
   data: EvolutionDataPoint[];
   availableSeries: {
     hotSensor: boolean;
@@ -56,15 +60,15 @@ interface EvolutionResponse {
     boiler: boolean;
     boilerActive: boolean;
   };
-}
+};
 
-interface FileMetadata {
+type FileMetadata = {
   fileName: string;
   month: string;
   monthLabel: string;
   isComplete: boolean;
   importedAt: string;
-}
+};
 
 type PeriodType = "month" | "range";
 
@@ -101,7 +105,7 @@ export default function EvolutionPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [availableMonths, setAvailableMonths] = useState<FileMetadata[]>([]);
-  const [data, setData] = useState<EvolutionDataPoint[]>([]);
+  const [data, setData] = useState<ChartDataPoint[]>([]);
   const [availableSeries, setAvailableSeries] = useState<
     EvolutionResponse["availableSeries"]
   >({
@@ -201,9 +205,14 @@ export default function EvolutionPage() {
 
       const result: EvolutionResponse = await response.json();
       // Transformer les données booléennes en nombres pour les barres (100% = actif, 0% = inactif)
-      const transformedData = result.data.map((point) => ({
+      const transformedData: ChartDataPoint[] = result.data.map((point) => ({
         ...point,
-        boilerActive: point.boilerActive !== undefined ? (point.boilerActive ? 100 : 0) : undefined,
+        boilerActive:
+          point.boilerActive !== undefined
+            ? point.boilerActive
+              ? 100
+              : 0
+            : undefined,
       }));
       setData(transformedData);
       setAvailableSeries(result.availableSeries);
@@ -415,7 +424,7 @@ export default function EvolutionPage() {
                       labelFormatter={(value) =>
                         formatTimestamp(value as string)
                       }
-                      formatter={(value: number | boolean, name: string) => {
+                      formatter={(value: unknown, name: string) => {
                         if (name === "boilerActive") {
                           return [value === 100 ? "On" : "Off", ""];
                         }
