@@ -1,5 +1,4 @@
-import puppeteer, { type Browser, type Page } from "puppeteer-core"
-import chromium from "@sparticuz/chromium-min"
+import { chromium, type Browser, type Page } from "playwright"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -57,48 +56,36 @@ export const scrapeHeatingData = async (
   let browser: Browser | null = null
 
   try {
-    // Utiliser Chromium optimisé pour serverless sur Vercel, ou Chrome local en développement
-    const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME
-    
-    let executablePath: string
-    let args: string[]
-
-    if (isServerless) {
-      // Sur Vercel/AWS Lambda, utiliser @sparticuz/chromium-min
-      try {
-        executablePath = await chromium.executablePath()
-        args = chromium.args
-      } catch (error) {
-        console.error("Error getting chromium executable path:", error)
-        throw new Error(
-          `Impossible de charger Chromium pour Vercel. Erreur: ${error instanceof Error ? error.message : String(error)}`
-        )
-      }
-    } else {
-      // En développement local, utiliser Chrome installé localement
-      if (process.platform === "win32") {
-        executablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-      } else if (process.platform === "darwin") {
-        executablePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-      } else {
-        executablePath = "/usr/bin/google-chrome-stable"
-      }
-      args = ["--no-sandbox", "--disable-setuid-sandbox"]
+    // Configuration pour Vercel selon le tutoriel Zenrows
+    const browserOptions: Parameters<typeof chromium.launch>[0] = {
+      headless: true,
     }
 
-    browser = await puppeteer.launch({
-      args,
-      defaultViewport: { width: 1280, height: 720 },
-      executablePath,
-      headless: true,
+    // Sur Vercel, ajouter les arguments nécessaires
+    if (process.env.VERCEL) {
+      browserOptions.args = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
+        "--disable-gpu",
+      ]
+    }
+
+    browser = await chromium.launch(browserOptions)
+
+    const context = await browser.newContext({
+      userAgent: USER_AGENT,
     })
 
-    const page: Page = await browser.newPage()
-    await page.setUserAgent(USER_AGENT)
+    const page: Page = await context.newPage()
 
     // Navigate to login page
     await page.goto("https://my.solisart.fr/", {
-      waitUntil: "networkidle2",
+      waitUntil: "networkidle",
       timeout: 30000,
     })
 
@@ -109,86 +96,78 @@ export const scrapeHeatingData = async (
     }
 
     // Fill login form
-    await page.type('input[name="id"]', id)
-    await page.type('input[name="pass"]', password)
+    await page.fill('input[name="id"]', id)
+    await page.fill('input[name="pass"]', password)
     await page.click('input[name="connexion"]')
 
     // Wait for navigation after login
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await page.waitForTimeout(500)
 
     // Get parameters area
-    const areaBox = await page.$("#td-parametrage-mode")
-    const activeArea = await areaBox?.$(".ui-state-active")
-    const activeAreaText = (await page.evaluate((el) => el?.textContent || "", activeArea)) || ""
+    const areaBox = await page.locator("#td-parametrage-mode")
+    const activeArea = areaBox.locator(".ui-state-active")
+    const activeAreaText = (await activeArea.textContent()) || ""
 
-    const areaConfort = await page.$("#input-parametrage-confort")
-    const areaConfortText = (await page.evaluate((el) => el?.textContent || "", areaConfort)) || ""
+    const areaConfort = await page.locator("#input-parametrage-confort")
+    const areaConfortText = (await areaConfort.textContent()) || ""
 
-    const areaMin = await page.$("#input-parametrage-reduit")
-    const areaMinText = (await page.evaluate((el) => el?.textContent || "", areaMin)) || ""
+    const areaMin = await page.locator("#input-parametrage-reduit")
+    const areaMinText = (await areaMin.textContent()) || ""
 
     // Click on ECS button to get ECS parameters
-    const ecsButton = await page.$("#header-parametrage-ecs")
-    if (ecsButton) {
+    const ecsButton = page.locator("#header-parametrage-ecs")
+    if (await ecsButton.count() > 0) {
       await ecsButton.click()
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await page.waitForTimeout(500)
     }
 
-    // Get ECS parameters using evaluate
-    const activeEcsScript = await page.evaluate(() => {
-      const element = document.querySelector(
-        "#td-parametrage-ecs-mode .ui-state-active"
-      )
-      return element?.textContent || ""
-    })
+    // Get ECS parameters
+    const activeEcsScript =
+      (await page.locator("#td-parametrage-ecs-mode .ui-state-active").textContent()) || ""
 
-    const ecsConfortScript = await page.evaluate(() => {
-      const element = document.querySelector("#input-parametrage-ecs-confort")
-      return element?.textContent || ""
-    })
+    const ecsConfortScript =
+      (await page.locator("#input-parametrage-ecs-confort").textContent()) || ""
 
-    const ecsMinScript = await page.evaluate(() => {
-      const element = document.querySelector("#input-parametrage-ecs-reduit")
-      return element?.textContent || ""
-    })
+    const ecsMinScript =
+      (await page.locator("#input-parametrage-ecs-reduit").textContent()) || ""
 
     // Click on Visualization tab
-    const visualizationInput = await page.$("label[for='input-pages-visualisation']")
-    if (visualizationInput) {
+    const visualizationInput = page.locator("label[for='input-pages-visualisation']")
+    if (await visualizationInput.count() > 0) {
       await visualizationInput.click()
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await page.waitForTimeout(500)
     }
 
     // Get temperature values
-    const t1 = await page.$("#temp-valeur-1")
-    const t1Text = (await page.evaluate((el) => el?.textContent || "", t1)) || ""
+    const t1 = await page.locator("#temp-valeur-1")
+    const t1Text = (await t1.textContent()) || ""
 
-    const t2 = await page.$("#temp-valeur-2")
-    const t2Text = (await page.evaluate((el) => el?.textContent || "", t2)) || ""
+    const t2 = await page.locator("#temp-valeur-2")
+    const t2Text = (await t2.textContent()) || ""
 
-    const t3 = await page.$("#temp-valeur-3")
-    const t3Text = (await page.evaluate((el) => el?.textContent || "", t3)) || ""
+    const t3 = await page.locator("#temp-valeur-3")
+    const t3Text = (await t3.textContent()) || ""
 
-    const t4 = await page.$("#temp-valeur-4")
-    const t4Text = (await page.evaluate((el) => el?.textContent || "", t4)) || ""
+    const t4 = await page.locator("#temp-valeur-4")
+    const t4Text = (await t4.textContent()) || ""
 
-    const t6 = await page.$("#temp-valeur-6")
-    const t6Text = (await page.evaluate((el) => el?.textContent || "", t6)) || ""
+    const t6 = await page.locator("#temp-valeur-6")
+    const t6Text = (await t6.textContent()) || ""
 
-    const t7 = await page.$("#temp-valeur-7")
-    const t7Text = (await page.evaluate((el) => el?.textContent || "", t7)) || ""
+    const t7 = await page.locator("#temp-valeur-7")
+    const t7Text = (await t7.textContent()) || ""
 
-    const t8 = await page.$("#temp-valeur-8")
-    const t8Text = (await page.evaluate((el) => el?.textContent || "", t8)) || ""
+    const t8 = await page.locator("#temp-valeur-8")
+    const t8Text = (await t8.textContent()) || ""
 
-    const t9 = await page.$("#temp-valeur-9")
-    const t9Text = (await page.evaluate((el) => el?.textContent || "", t9)) || ""
+    const t9 = await page.locator("#temp-valeur-9")
+    const t9Text = (await t9.textContent()) || ""
 
-    const t11 = await page.$("#temp-valeur-11")
-    const t11Text = (await page.evaluate((el) => el?.textContent || "", t11)) || ""
+    const t11 = await page.locator("#temp-valeur-11")
+    const t11Text = (await t11.textContent()) || ""
 
-    const boilerActive = await page.$("#chaudiere-1-label")
-    const boilerActiveText = (await page.evaluate((el) => el?.textContent || "", boilerActive)) || ""
+    const boilerActive = await page.locator("#chaudiere-1-label")
+    const boilerActiveText = (await boilerActive.textContent()) || ""
 
     const serverData: HeatingData = {
       date: new Date(),
@@ -231,6 +210,7 @@ export const scrapeHeatingData = async (
     const filePath = path.resolve(dataDir, `heating.json`)
     fs.writeFileSync(filePath, JSON.stringify(serverData, null, 2))
 
+    await context.close()
     return serverData
   } catch (error) {
     console.error("Error scraping heating data:", error)

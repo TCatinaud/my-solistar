@@ -8,7 +8,7 @@ Application Next.js simple et moderne pour récupérer et afficher les données 
 - **TypeScript** - Typage statique
 - **Shadcn UI** - Composants UI modernes
 - **Tailwind CSS** - Framework CSS utility-first
-- **Puppeteer Core + @sparticuz/chromium-min** - Scraping web automatisé (optimisé pour Vercel serverless, version minimale)
+- **Playwright** - Scraping web automatisé (optimisé pour Vercel avec configuration spéciale)
 - **Clerk** - Authentification et gestion des utilisateurs
 
 ## 📋 Prérequis
@@ -31,10 +31,15 @@ cd home-energy
 yarn install
 ```
 
-### 3. Configuration du navigateur
+### 3. Installer le navigateur Chromium
 
-- **En production (Vercel)** : Le navigateur Chromium est automatiquement fourni par `@sparticuz/chromium-min` (version minimale optimisée pour les fonctions serverless, ~40MB)
-- **En développement local** : Vous devez avoir Google Chrome installé sur votre machine. Le script utilisera automatiquement Chrome local.
+Le navigateur Chromium est installé automatiquement lors de `yarn install` via le script `postinstall`. Si nécessaire, vous pouvez l'installer manuellement :
+
+```bash
+yarn playwright install chromium
+```
+
+**Note pour Vercel** : Le navigateur est également installé automatiquement lors du déploiement grâce à la configuration dans `vercel.json`.
 
 ### 4. Configuration des variables d'environnement
 
@@ -98,7 +103,7 @@ home-energy/
 ├── lib/
 │   └── utils.ts                  # Utilitaires (cn function)
 ├── scripts/
-│   └── scrape-heating.ts         # Script Puppeteer Core + @sparticuz/chromium-min pour le scraping
+│   └── scrape-heating.ts         # Script Playwright pour le scraping
 ├── data/                         # Dossier pour les données (non versionné)
 ├── .env                           # Variables d'environnement (non versionné)
 ├── .env.example                  # Exemple de variables d'environnement
@@ -130,7 +135,7 @@ L'application récupère automatiquement les données suivantes depuis my.solisa
 
 ### GET `/api/heating`
 
-Récupère les données actuelles en exécutant le scraping avec Puppeteer Core et @sparticuz/chromium-min (version minimale optimisée pour Vercel).
+Récupère les données actuelles en exécutant le scraping avec Playwright (configuré pour fonctionner sur Vercel).
 
 **Authentification requise** : Oui
 
@@ -217,9 +222,8 @@ Les routes d'import (`/api/import` et `/api/weather/import`) sont protégées pa
 ### L'application ne récupère pas les données
 
 1. Vérifiez que les identifiants dans `.env` sont corrects
-2. **En développement local** : Assurez-vous que Google Chrome est installé sur votre machine
-3. **En production (Vercel)** : Le navigateur est automatiquement fourni par `@sparticuz/chromium-min` (version minimale)
-4. Consultez les logs de la console pour plus de détails
+2. Vérifiez que Playwright est installé : `yarn playwright install chromium`
+3. Consultez les logs de la console pour plus de détails
 
 ### Erreurs de permissions
 
@@ -229,20 +233,19 @@ Si vous rencontrez des erreurs de permissions sur le dossier `data/` :
 chmod -R 755 data
 ```
 
-### Puppeteer ne fonctionne pas
+### Playwright ne fonctionne pas
 
 **En développement local :**
-- Assurez-vous que Google Chrome est installé sur votre machine
-- Sur macOS : `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
-- Sur Linux : `/usr/bin/google-chrome-stable`
-- Sur Windows : `C:\Program Files\Google\Chrome\Application\chrome.exe`
+- Assurez-vous que les navigateurs Playwright sont installés : `yarn playwright install chromium`
+- Vérifiez que vous avez les permissions nécessaires pour exécuter les navigateurs
 
 **En production (Vercel) :**
-- Le navigateur est automatiquement fourni par `@sparticuz/chromium-min` (version minimale optimisée pour serverless)
-- Aucune installation manuelle nécessaire
-- Compatible avec le plan gratuit de Vercel (limite de 50MB respectée, version minimale ~40MB)
-- Si vous rencontrez des erreurs, vérifiez que la variable d'environnement `VERCEL` est bien définie
-- Les packages sont configurés comme `serverExternalPackages` dans `next.config.js` pour une meilleure compatibilité
+- Le navigateur Chromium est installé automatiquement lors du déploiement via `vercel.json`
+- La configuration utilise les arguments `--no-sandbox` et `--disable-setuid-sandbox` pour la compatibilité serverless
+- Si vous rencontrez des erreurs :
+  - Vérifiez que la variable d'environnement `VERCEL` est bien définie
+  - Consultez les logs de déploiement pour voir si l'installation de Chromium a réussi
+  - Assurez-vous que la fonction a suffisamment de mémoire (configurée à 1024MB dans `vercel.json`)
 
 ## 📄 Licence
 

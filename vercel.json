@@ -5,6 +5,6 @@
       "memory": 1024
     }
   },
-  "installCommand": "yarn install --ignore-engines"
+  "installCommand": "yarn install --ignore-engines && yarn playwright install chromium"
 }
 
