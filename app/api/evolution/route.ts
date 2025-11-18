@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import * as fs from "fs";
-import * as path from "path";
+import { readFile } from "@/lib/blob-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -144,19 +143,17 @@ const isDayDataWeather = (
   return value && typeof value === "object" && !value.isComplete && !value.importedAt && !value.latitude && !value.longitude;
 };
 
-const loadSolistarData = (
+const loadSolistarData = async (
   year: number,
   month: number
-): SolistarData | null => {
+): Promise<SolistarData | null> => {
   const fileName = `${year}-${String(month).padStart(2, "0")}-solistar.json`;
-  const filePath = path.resolve(process.cwd(), "data", "solistar", fileName);
-
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
 
   try {
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = await readFile(fileName, "solistar");
+    if (!content) {
+      return null;
+    }
     return JSON.parse(content) as SolistarData;
   } catch (error) {
     console.error(`Error loading solistar data from ${fileName}:`, error);
@@ -164,19 +161,17 @@ const loadSolistarData = (
   }
 };
 
-const loadWeatherData = (
+const loadWeatherData = async (
   year: number,
   month: number
-): WeatherData | null => {
+): Promise<WeatherData | null> => {
   const fileName = `${year}-${String(month).padStart(2, "0")}-weather.json`;
-  const filePath = path.resolve(process.cwd(), "data", "weather", fileName);
-
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
 
   try {
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = await readFile(fileName, "weather");
+    if (!content) {
+      return null;
+    }
     return JSON.parse(content) as WeatherData;
   } catch (error) {
     console.error(`Error loading weather data from ${fileName}:`, error);
@@ -246,8 +241,8 @@ export async function GET(request: NextRequest) {
       );
 
       // Charger les données solistar et météo (pour mois uniquement)
-      const solistarData = loadSolistarData(targetYear, targetMonth);
-      const weatherData = loadWeatherData(targetYear, targetMonth);
+      const solistarData = await loadSolistarData(targetYear, targetMonth);
+      const weatherData = await loadWeatherData(targetYear, targetMonth);
 
       if (!solistarData && !weatherData) {
         return NextResponse.json(
@@ -357,8 +352,8 @@ export async function GET(request: NextRequest) {
       // Pour chaque jour dans la plage
       for (const { day, year, month } of rangeDays) {
         // Charger les données pour ce mois spécifique
-        const solistarData = loadSolistarData(year, month);
-        const weatherData = loadWeatherData(year, month);
+        const solistarData = await loadSolistarData(year, month);
+        const weatherData = await loadWeatherData(year, month);
 
         for (const timeSlot of allTimeSlots) {
           // Construire le timestamp ISO

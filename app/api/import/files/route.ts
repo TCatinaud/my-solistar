@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import * as fs from "fs"
-import * as path from "path"
+import { readFile, listFiles, deleteFile, fileExists } from "@/lib/blob-storage"
 
 export const dynamic = "force-dynamic"
 
@@ -39,20 +38,20 @@ export async function GET() {
       )
     }
 
-    const dataDir = path.resolve(process.cwd(), "data", "solistar")
-    
-    if (!fs.existsSync(dataDir)) {
-      return NextResponse.json({ files: [] })
-    }
-
-    const files = fs.readdirSync(dataDir)
+    // Lister les fichiers
+    // En local : liste depuis data/solistar/
+    // En production : liste depuis Vercel Blob Storage
+    const files = await listFiles("solistar", "-solistar\\.json$")
     const solistarFiles = files.filter((file) => file.endsWith("-solistar.json"))
 
     const fileList: FileMetadata[] = []
 
     for (const fileName of solistarFiles) {
-      const filePath = path.resolve(dataDir, fileName)
-      const fileContent = fs.readFileSync(filePath, "utf-8")
+      const fileContent = await readFile(fileName, "solistar")
+      
+      if (!fileContent) {
+        continue
+      }
       
       try {
         const data = JSON.parse(fileContent)
@@ -71,24 +70,23 @@ export async function GET() {
           month: `${year}-${month}`,
           monthLabel,
           isComplete: metadata.isComplete || false,
-          importedAt: metadata.importedAt || fs.statSync(filePath).mtime.toISOString(),
+          importedAt: metadata.importedAt || new Date().toISOString(),
         })
       } catch (error) {
         console.error(`Error reading file ${fileName}:`, error)
-        // Si le fichier n'a pas de métadonnées, utiliser les infos du système de fichiers
+        // Si le fichier n'a pas de métadonnées, utiliser la date actuelle
         const match = fileName.match(/(\d{4})-(\d{2})-solistar\.json/)
         if (match) {
           const [, year, month] = match
           const monthIndex = parseInt(month) - 1
           const monthLabel = `${monthNames[monthIndex]} ${year}`
-          const stats = fs.statSync(filePath)
 
           fileList.push({
             fileName,
             month: `${year}-${month}`,
             monthLabel,
             isComplete: false,
-            importedAt: stats.mtime.toISOString(),
+            importedAt: new Date().toISOString(),
           })
         }
       }
@@ -139,11 +137,9 @@ export async function DELETE(request: Request) {
       )
     }
 
-    const dataDir = path.resolve(process.cwd(), "data", "solistar")
-    const filePath = path.resolve(dataDir, fileName)
-
     // Vérifier que le fichier existe
-    if (!fs.existsSync(filePath)) {
+    const exists = await fileExists(fileName, "solistar")
+    if (!exists) {
       return NextResponse.json(
         { success: false, message: "Fichier introuvable" },
         { status: 404 }
@@ -151,7 +147,9 @@ export async function DELETE(request: Request) {
     }
 
     // Supprimer le fichier
-    fs.unlinkSync(filePath)
+    // En local : supprime depuis data/solistar/
+    // En production : supprime depuis Vercel Blob Storage
+    await deleteFile(fileName, "solistar")
 
     return NextResponse.json({
       success: true,

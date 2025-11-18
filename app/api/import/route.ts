@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { checkRateLimit } from "@/lib/rate-limit"
-import * as fs from "fs"
-import * as path from "path"
+import { writeFile, fileExists } from "@/lib/blob-storage"
 
 export const dynamic = "force-dynamic"
 
@@ -307,16 +306,10 @@ export async function POST(request: NextRequest) {
     const { month, year, monthIndex } = monthInfo
 
     // Vérifier si le fichier existe déjà
-    const dataDir = path.resolve(process.cwd(), "data", "solistar")
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true })
-    }
-
     const fileName = `${month}-solistar.json`
-    const filePath = path.resolve(dataDir, fileName)
-    const fileExists = fs.existsSync(filePath)
+    const exists = await fileExists(fileName, "solistar")
 
-    if (fileExists && !confirmReplace) {
+    if (exists && !confirmReplace) {
       return NextResponse.json(
         {
           success: false,
@@ -342,7 +335,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Sauvegarder le fichier JSON
-    fs.writeFileSync(filePath, JSON.stringify(processedData, null, 2))
+    // En local : utilise data/solistar/
+    // En production : utilise Vercel Blob Storage
+    await writeFile(fileName, JSON.stringify(processedData, null, 2), "solistar")
 
     return NextResponse.json({
       success: true,

@@ -956,6 +956,17 @@
     throttleit "^2.1.0"
     undici "^5.28.4"
 
+"@vercel/blob@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@vercel/blob/-/blob-2.0.0.tgz#de4536548fc8303cde932269aa09325b8f4e00f6"
+  integrity sha512-oAj7Pdy83YKSwIaMFoM7zFeLYWRc+qUpW3PiDSblxQMnGFb43qs4bmfq7dr/+JIfwhs6PTwe1o2YBwKhyjWxXw==
+  dependencies:
+    async-retry "^1.3.3"
+    is-buffer "^2.0.5"
+    is-node-process "^1.2.0"
+    throttleit "^2.1.0"
+    undici "^5.28.4"
+
 "@vercel/build-utils@13.0.1":
   version "13.0.1"
   resolved "https://registry.yarnpkg.com/@vercel/build-utils/-/build-utils-13.0.1.tgz#92b4c7d37f897e13876ae224792676eb2dae6cb6"

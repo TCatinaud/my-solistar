@@ -1,6 +1,5 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright"
-import * as fs from "fs"
-import * as path from "path"
+import { writeFile } from "@/lib/blob-storage"
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -214,14 +213,10 @@ export const scrapeHeatingData = async (
       },
     }
 
-    // Save to data directory if it exists
-    const dataDir = path.resolve(process.cwd(), "data")
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true })
-    }
-
-    const filePath = path.resolve(dataDir, `heating.json`)
-    fs.writeFileSync(filePath, JSON.stringify(serverData, null, 2))
+    // Save to data directory
+    // En local : utilise data/
+    // En production : utilise Vercel Blob Storage
+    await writeFile("heating.json", JSON.stringify(serverData, null, 2))
 
     // Fermer le contexte avant de retourner
     if (context) {

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { checkRateLimit } from "@/lib/rate-limit";
-import * as fs from "fs";
-import * as path from "path";
+import { writeFile } from "@/lib/blob-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -256,15 +255,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Sauvegarder le fichier
-    const dataDir = path.resolve(process.cwd(), "data", "weather");
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
+    // En local : utilise data/weather/
+    // En production : utilise Vercel Blob Storage
     const fileName = `${year}-${String(month).padStart(2, "0")}-weather.json`;
-    const filePath = path.resolve(dataDir, fileName);
-
-    fs.writeFileSync(filePath, JSON.stringify(weatherData, null, 2));
+    await writeFile(fileName, JSON.stringify(weatherData, null, 2), "weather");
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import * as fs from "fs";
-import * as path from "path";
+import { readFile, listFiles, deleteFile, fileExists } from "@/lib/blob-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -40,13 +39,10 @@ export async function GET() {
       );
     }
 
-    const weatherDir = path.resolve(process.cwd(), "data", "weather");
-
-    if (!fs.existsSync(weatherDir)) {
-      return NextResponse.json({ files: [] });
-    }
-
-    const files = fs.readdirSync(weatherDir);
+    // Lister les fichiers
+    // En local : liste depuis data/weather/
+    // En production : liste depuis Vercel Blob Storage
+    const files = await listFiles("weather", "-weather\\.json$");
     const weatherFiles = files.filter((file) =>
       file.endsWith("-weather.json")
     );
@@ -54,8 +50,11 @@ export async function GET() {
     const fileList: WeatherFileMetadata[] = [];
 
     for (const fileName of weatherFiles) {
-      const filePath = path.resolve(weatherDir, fileName);
-      const fileContent = fs.readFileSync(filePath, "utf-8");
+      const fileContent = await readFile(fileName, "weather");
+
+      if (!fileContent) {
+        continue;
+      }
 
       try {
         const data = JSON.parse(fileContent);
@@ -73,8 +72,7 @@ export async function GET() {
           fileName,
           month: `${year}-${month}`,
           monthLabel,
-          importedAt:
-            metadata.importedAt || fs.statSync(filePath).mtime.toISOString(),
+          importedAt: metadata.importedAt || new Date().toISOString(),
           latitude: metadata.latitude,
           longitude: metadata.longitude,
         });
@@ -85,13 +83,12 @@ export async function GET() {
           const [, year, month] = match;
           const monthIndex = parseInt(month) - 1;
           const monthLabel = `${monthNames[monthIndex]} ${year}`;
-          const stats = fs.statSync(filePath);
 
           fileList.push({
             fileName,
             month: `${year}-${month}`,
             monthLabel,
-            importedAt: stats.mtime.toISOString(),
+            importedAt: new Date().toISOString(),
           });
         }
       }
@@ -141,17 +138,19 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const weatherDir = path.resolve(process.cwd(), "data", "weather");
-    const filePath = path.resolve(weatherDir, fileName);
-
-    if (!fs.existsSync(filePath)) {
+    // Vérifier que le fichier existe
+    const exists = await fileExists(fileName, "weather");
+    if (!exists) {
       return NextResponse.json(
         { success: false, message: "Fichier introuvable" },
         { status: 404 }
       );
     }
 
-    fs.unlinkSync(filePath);
+    // Supprimer le fichier
+    // En local : supprime depuis data/weather/
+    // En production : supprime depuis Vercel Blob Storage
+    await deleteFile(fileName, "weather");
 
     return NextResponse.json({
       success: true,
