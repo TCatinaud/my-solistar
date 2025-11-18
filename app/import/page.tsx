@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -69,6 +71,8 @@ const monthNames = [
 ];
 
 export default function ImportPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
   const [status, setStatus] = useState<ImportStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -99,9 +103,17 @@ export default function ImportPage() {
   );
 
   useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     loadFiles();
     loadWeatherFiles();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const loadFiles = async () => {
     try {
@@ -342,6 +354,10 @@ export default function ImportPage() {
       setWeatherFileToDelete(null);
     }
   };
+
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   return (
     <main className="container mx-auto p-6 space-y-6">

@@ -9,6 +9,7 @@ Application Next.js simple et moderne pour récupérer et afficher les données 
 - **Shadcn UI** - Composants UI modernes
 - **Tailwind CSS** - Framework CSS utility-first
 - **Playwright** - Scraping web automatisé
+- **Clerk** - Authentification et gestion des utilisateurs
 
 ## 📋 Prérequis
 
@@ -54,7 +55,23 @@ yarn playwright install chromium
    # Identifiants SOLISTAR
    SOLISTAR_ID=votre-email@example.com
    SOLISTAR_PASSWORD=votre-mot-de-passe
+
+   # Clerk Authentication
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
    ```
+
+### 4.1. Configuration de Clerk
+
+1. Créez un compte sur [Clerk](https://clerk.com/) (gratuit jusqu'à 10 000 utilisateurs actifs/mois)
+2. Créez une nouvelle application dans le dashboard Clerk
+3. Récupérez vos clés API :
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` : Clé publique (commence par `pk_test_` ou `pk_live_`)
+   - `CLERK_SECRET_KEY` : Clé secrète (commence par `sk_test_` ou `sk_live_`)
+4. Ajoutez-les dans votre fichier `.env`
+5. Configurez les URLs de redirection dans Clerk :
+   - Sign-in redirect URL: `http://localhost:3000` (dev) ou votre domaine de production
+   - Sign-up redirect URL: `http://localhost:3000` (dev) ou votre domaine de production
 
 ### 5. Démarrer l'application en développement
 
@@ -110,9 +127,13 @@ L'application récupère automatiquement les données suivantes depuis my.solisa
 
 ## 🔌 API Endpoints
 
+> **Note** : Toutes les routes API nécessitent une authentification. Les requêtes non authentifiées recevront une erreur 401.
+
 ### GET `/api/heating`
 
 Récupère les données actuelles en exécutant le scraping Playwright.
+
+**Authentification requise** : Oui
 
 **Réponse :**
 
@@ -162,10 +183,28 @@ Consultez le fichier [SYNOLOGY.md](./SYNOLOGY.md) pour les instructions détaill
 
 ## 🔒 Sécurité
 
+- ✅ **Authentification Clerk** : Toutes les pages et routes API sont protégées
+- ✅ **Rate Limiting** : Limitation des requêtes sur les routes d'import (5 requêtes/minute)
+- ✅ **Headers de sécurité** : Protection contre les attaques XSS, clickjacking, etc.
 - ✅ Variables d'environnement pour les identifiants
 - ✅ Fichiers `.env*` exclus du versionnement
 - ✅ Dossier `data/` non versionné
 - ✅ Gestion d'erreurs appropriée
+
+### Authentification
+
+L'application utilise Clerk pour l'authentification. Toutes les routes sont protégées :
+
+- Les pages redirigent automatiquement vers `/sign-in` si l'utilisateur n'est pas authentifié
+- Les routes API retournent une erreur 401 si l'utilisateur n'est pas authentifié
+- Le bouton de déconnexion est disponible dans le header
+
+### Rate Limiting
+
+Les routes d'import (`/api/import` et `/api/weather/import`) sont protégées par un rate limiting :
+
+- Maximum 5 requêtes par minute par utilisateur
+- Retourne une erreur 429 avec un header `Retry-After` si la limite est dépassée
 
 ## 📝 Scripts disponibles
 

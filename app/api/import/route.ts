@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
+import { checkRateLimit } from "@/lib/rate-limit"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -241,6 +243,34 @@ const checkMonthComplete = (processedData: ProcessedData, year: number, monthInd
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Non autorisé" },
+        { status: 401 }
+      )
+    }
+
+    // Rate limiting pour les imports
+    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || userId
+    const rateLimit = checkRateLimit(ip, { maxRequests: 5, windowMs: 60000 }) // 5 imports par minute
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Trop de requêtes. Veuillez réessayer plus tard.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+          },
+        }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File
     const confirmReplace = formData.get("confirmReplace") === "true"

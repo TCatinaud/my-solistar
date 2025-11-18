@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -92,6 +94,8 @@ const formatTimestamp = (timestamp: string): string => {
 };
 
 export default function EvolutionPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
   const [periodType, setPeriodType] = useState<PeriodType>("month");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
@@ -135,8 +139,17 @@ export default function EvolutionPage() {
     boilerActive: true,
   });
 
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   // Charger la liste des mois disponibles
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     const fetchAvailableMonths = async () => {
       try {
         const response = await fetch("/api/import/files");
@@ -154,9 +167,10 @@ export default function EvolutionPage() {
     };
 
     fetchAvailableMonths();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const fetchData = useCallback(async () => {
+    if (!isLoaded || !isSignedIn) return;
     if (periodType === "month" && !selectedMonth) return;
     if (periodType === "range" && (!startDate || !endDate)) return;
 
@@ -211,7 +225,7 @@ export default function EvolutionPage() {
     } finally {
       setLoading(false);
     }
-  }, [periodType, selectedMonth, startDate, endDate]);
+  }, [periodType, selectedMonth, startDate, endDate, isLoaded, isSignedIn]);
 
   // Charger les données quand la période change
   useEffect(() => {
@@ -252,6 +266,10 @@ export default function EvolutionPage() {
     boiler: "Chaudière",
     boilerActive: "Activation chaudière",
   };
+
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   return (
     <main className="container mx-auto p-6 space-y-6">

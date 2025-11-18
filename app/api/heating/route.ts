@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { scrapeHeatingData } from "@/scripts/scrape-heating"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Non autorisé" },
+        { status: 401 }
+      )
+    }
+
     const id = process.env.SOLISTAR_ID
     const password = process.env.SOLISTAR_PASSWORD
 

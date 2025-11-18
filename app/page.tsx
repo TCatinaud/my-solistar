@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -61,11 +63,21 @@ const getOriginVariant = (
 };
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<HeatingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -92,7 +104,11 @@ export default function Home() {
     };
 
     fetchData();
-  }, []);
+  }, [isLoaded, isSignedIn]);
+
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   if (loading) {
     return (
