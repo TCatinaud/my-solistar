@@ -33,6 +33,7 @@ export const writeFile = async (
     await put(blobPath, data, {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true, // Permettre l'écrasement des fichiers existants
     })
   } else {
     // Utiliser le système de fichiers en local
