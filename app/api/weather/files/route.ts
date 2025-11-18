@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -30,6 +31,15 @@ const monthNames = [
 
 export async function GET() {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Non autorisé" },
+        { status: 401 }
+      );
+    }
+
     const weatherDir = path.resolve(process.cwd(), "data", "weather");
 
     if (!fs.existsSync(weatherDir)) {
@@ -105,6 +115,15 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Non autorisé" },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const fileName = searchParams.get("fileName");
 

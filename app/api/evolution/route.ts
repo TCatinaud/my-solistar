@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -195,6 +196,15 @@ const checkSeriesCompleteness = (
 
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Non autorisé" },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const periodType = searchParams.get("periodType"); // "year", "month", "range"
     const year = searchParams.get("year");
