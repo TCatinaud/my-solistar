@@ -1,11 +1,11 @@
-import { chromium, type Browser, type Page } from "playwright"
+import puppeteer, { type Browser, type Page } from "puppeteer"
 import * as fs from "fs"
 import * as path from "path"
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-interface HeatingData {
+type HeatingData = {
   date: Date
   data: {
     panels: {
@@ -56,19 +56,17 @@ export const scrapeHeatingData = async (
   let browser: Browser | null = null
 
   try {
-    browser = await chromium.launch({
+    browser = await puppeteer.launch({
       headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     })
 
-    const context = await browser.newContext({
-      userAgent: USER_AGENT,
-    })
-
-    const page: Page = await context.newPage()
+    const page: Page = await browser.newPage()
+    await page.setUserAgent(USER_AGENT)
 
     // Navigate to login page
     await page.goto("https://my.solisart.fr/", {
-      waitUntil: "networkidle",
+      waitUntil: "networkidle2",
       timeout: 30000,
     })
 
@@ -79,30 +77,32 @@ export const scrapeHeatingData = async (
     }
 
     // Fill login form
-    await page.fill('input[name="id"]', id)
-    await page.fill('input[name="pass"]', password)
+    await page.type('input[name="id"]', id)
+    await page.type('input[name="pass"]', password)
     await page.click('input[name="connexion"]')
 
     // Wait for navigation after login
-    await page.waitForTimeout(500)
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Get parameters area
-    const areaBox = page.locator("#td-parametrage-mode")
-    const activeArea = areaBox.locator(".ui-state-active")
-    const activeAreaText = (await activeArea.textContent()) || ""
+    const areaBox = await page.$("#td-parametrage-mode")
+    const activeArea = await areaBox?.$(".ui-state-active")
+    const activeAreaText = (await page.evaluate((el) => el?.textContent || "", activeArea)) || ""
 
-    const areaConfort = page.locator("#input-parametrage-confort")
-    const areaConfortText = (await areaConfort.textContent()) || ""
+    const areaConfort = await page.$("#input-parametrage-confort")
+    const areaConfortText = (await page.evaluate((el) => el?.textContent || "", areaConfort)) || ""
 
-    const areaMin = page.locator("#input-parametrage-reduit")
-    const areaMinText = (await areaMin.textContent()) || ""
+    const areaMin = await page.$("#input-parametrage-reduit")
+    const areaMinText = (await page.evaluate((el) => el?.textContent || "", areaMin)) || ""
 
     // Click on ECS button to get ECS parameters
-    const ecsButton = page.locator("#header-parametrage-ecs")
-    await ecsButton.click()
-    await page.waitForTimeout(500)
+    const ecsButton = await page.$("#header-parametrage-ecs")
+    if (ecsButton) {
+      await ecsButton.click()
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
 
-    // Get ECS parameters using evaluate (similar to executeScript in Selenium)
+    // Get ECS parameters using evaluate
     const activeEcsScript = await page.evaluate(() => {
       const element = document.querySelector(
         "#td-parametrage-ecs-mode .ui-state-active"
@@ -121,42 +121,42 @@ export const scrapeHeatingData = async (
     })
 
     // Click on Visualization tab
-    const visualizationInput = page.locator(
-      "label[for='input-pages-visualisation']"
-    )
-    await visualizationInput.click()
-    await page.waitForTimeout(500)
+    const visualizationInput = await page.$("label[for='input-pages-visualisation']")
+    if (visualizationInput) {
+      await visualizationInput.click()
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
 
     // Get temperature values
-    const t1 = page.locator("#temp-valeur-1")
-    const t1Text = (await t1.textContent()) || ""
+    const t1 = await page.$("#temp-valeur-1")
+    const t1Text = (await page.evaluate((el) => el?.textContent || "", t1)) || ""
 
-    const t2 = page.locator("#temp-valeur-2")
-    const t2Text = (await t2.textContent()) || ""
+    const t2 = await page.$("#temp-valeur-2")
+    const t2Text = (await page.evaluate((el) => el?.textContent || "", t2)) || ""
 
-    const t3 = page.locator("#temp-valeur-3")
-    const t3Text = (await t3.textContent()) || ""
+    const t3 = await page.$("#temp-valeur-3")
+    const t3Text = (await page.evaluate((el) => el?.textContent || "", t3)) || ""
 
-    const t4 = page.locator("#temp-valeur-4")
-    const t4Text = (await t4.textContent()) || ""
+    const t4 = await page.$("#temp-valeur-4")
+    const t4Text = (await page.evaluate((el) => el?.textContent || "", t4)) || ""
 
-    const t6 = page.locator("#temp-valeur-6")
-    const t6Text = (await t6.textContent()) || ""
+    const t6 = await page.$("#temp-valeur-6")
+    const t6Text = (await page.evaluate((el) => el?.textContent || "", t6)) || ""
 
-    const t7 = page.locator("#temp-valeur-7")
-    const t7Text = (await t7.textContent()) || ""
+    const t7 = await page.$("#temp-valeur-7")
+    const t7Text = (await page.evaluate((el) => el?.textContent || "", t7)) || ""
 
-    const t8 = page.locator("#temp-valeur-8")
-    const t8Text = (await t8.textContent()) || ""
+    const t8 = await page.$("#temp-valeur-8")
+    const t8Text = (await page.evaluate((el) => el?.textContent || "", t8)) || ""
 
-    const t9 = page.locator("#temp-valeur-9")
-    const t9Text = (await t9.textContent()) || ""
+    const t9 = await page.$("#temp-valeur-9")
+    const t9Text = (await page.evaluate((el) => el?.textContent || "", t9)) || ""
 
-    const t11 = page.locator("#temp-valeur-11")
-    const t11Text = (await t11.textContent()) || ""
+    const t11 = await page.$("#temp-valeur-11")
+    const t11Text = (await page.evaluate((el) => el?.textContent || "", t11)) || ""
 
-    const boilerActive = page.locator("#chaudiere-1-label")
-    const boilerActiveText = (await boilerActive.textContent()) || ""
+    const boilerActive = await page.$("#chaudiere-1-label")
+    const boilerActiveText = (await page.evaluate((el) => el?.textContent || "", boilerActive)) || ""
 
     const serverData: HeatingData = {
       date: new Date(),

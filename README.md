@@ -8,7 +8,7 @@ Application Next.js simple et moderne pour récupérer et afficher les données 
 - **TypeScript** - Typage statique
 - **Shadcn UI** - Composants UI modernes
 - **Tailwind CSS** - Framework CSS utility-first
-- **Playwright** - Scraping web automatisé
+- **Puppeteer** - Scraping web automatisé
 - **Clerk** - Authentification et gestion des utilisateurs
 
 ## 📋 Prérequis
@@ -31,10 +31,12 @@ cd home-energy
 yarn install
 ```
 
-### 3. Installer les navigateurs Playwright
+### 3. Installer le navigateur Chrome (automatique)
+
+Le navigateur Chrome est installé automatiquement lors de `yarn install` via le script `postinstall`. Si nécessaire, vous pouvez l'installer manuellement :
 
 ```bash
-yarn playwright install chromium
+yarn puppeteer browsers install chrome
 ```
 
 ### 4. Configuration des variables d'environnement
@@ -99,7 +101,7 @@ home-energy/
 ├── lib/
 │   └── utils.ts                  # Utilitaires (cn function)
 ├── scripts/
-│   └── scrape-heating.ts         # Script Playwright pour le scraping
+│   └── scrape-heating.ts         # Script Puppeteer pour le scraping
 ├── data/                         # Dossier pour les données (non versionné)
 ├── .env                           # Variables d'environnement (non versionné)
 ├── .env.example                  # Exemple de variables d'environnement
@@ -131,7 +133,7 @@ L'application récupère automatiquement les données suivantes depuis my.solisa
 
 ### GET `/api/heating`
 
-Récupère les données actuelles en exécutant le scraping Playwright.
+Récupère les données actuelles en exécutant le scraping Puppeteer.
 
 **Authentification requise** : Oui
 
@@ -218,7 +220,7 @@ Les routes d'import (`/api/import` et `/api/weather/import`) sont protégées pa
 ### L'application ne récupère pas les données
 
 1. Vérifiez que les identifiants dans `.env` sont corrects
-2. Vérifiez que Playwright est installé : `yarn playwright install chromium`
+2. Vérifiez que Puppeteer est installé : `yarn puppeteer browsers install chrome`
 3. Consultez les logs de la console pour plus de détails
 
 ### Erreurs de permissions
@@ -229,13 +231,15 @@ Si vous rencontrez des erreurs de permissions sur le dossier `data/` :
 chmod -R 755 data
 ```
 
-### Playwright ne fonctionne pas
+### Puppeteer ne fonctionne pas
 
-Assurez-vous que les navigateurs sont installés :
+Assurez-vous que Chrome est installé :
 
 ```bash
-yarn playwright install chromium
+yarn puppeteer browsers install chrome
 ```
+
+Si vous êtes sur un environnement serverless (comme Vercel), Puppeteer devrait fonctionner automatiquement. Si vous rencontrez des problèmes, vérifiez que les arguments `--no-sandbox` et `--disable-setuid-sandbox` sont bien passés au lancement du navigateur.
 
 ## 📄 Licence
 
