@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "app/api/heating/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "buildCommand": "yarn install && yarn build"
+}
+

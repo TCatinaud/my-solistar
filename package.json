@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "playwright install chromium",
     "vercel:dev": "vercel dev",
     "vercel:deploy": "vercel deploy",
     "vercel:prod": "vercel deploy --prod",
