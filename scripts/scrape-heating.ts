@@ -105,7 +105,7 @@ export const scrapeHeatingData = async (
     // Get ECS parameters using evaluate (similar to executeScript in Selenium)
     const activeEcsScript = await page.evaluate(() => {
       const element = document.querySelector(
-        "#radio-parametrage-ecs-mode .ui-state-active"
+        "#td-parametrage-ecs-mode .ui-state-active"
       )
       return element?.textContent || ""
     })
