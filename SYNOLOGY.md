@@ -43,9 +43,11 @@ Ce guide vous explique comment déployer l'application Home Energy sur un NAS Sy
    npm install
    ```
 
-3. Installez les navigateurs Playwright :
+3. Installez le navigateur Chrome (automatique via postinstall) :
    ```bash
-   npx playwright install chromium
+   # Le navigateur est installé automatiquement lors de yarn install
+   # Si nécessaire, installez-le manuellement :
+   yarn puppeteer browsers install chrome
    ```
 
 ### 4. Configuration des variables d'environnement
@@ -197,9 +199,9 @@ pm2 stop home-energy
 2. Vérifiez que Node.js est bien dans le PATH
 3. Vérifiez que le port 3000 n'est pas déjà utilisé : `netstat -tuln | grep 3000`
 
-### Playwright ne fonctionne pas
+### Puppeteer ne fonctionne pas
 
-1. Vérifiez que les navigateurs sont installés : `npx playwright install chromium`
+1. Vérifiez que Chrome est installé : `yarn puppeteer browsers install chrome`
 2. Vérifiez les permissions sur le dossier `data/`
 
 ### Erreurs de permissions
