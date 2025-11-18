@@ -1,6 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
-import { put, get, list, del } from "@vercel/blob"
+import { put, head, list, del } from "@vercel/blob"
 
 /**
  * Détecte si on est en environnement serverless (Vercel)
@@ -27,9 +27,11 @@ export const writeFile = async (
 ): Promise<void> => {
   if (isServerless()) {
     // Utiliser Vercel Blob Storage en production
+    // Note: Dans @vercel/blob v2.0.0, access ne peut être que 'public'
+    // Les fichiers sont protégés par l'authentification Clerk
     const blobPath = subDir ? `${subDir}/${fileName}` : fileName
     await put(blobPath, data, {
-      access: "private",
+      access: "public",
       addRandomSuffix: false,
     })
   } else {
@@ -56,11 +58,19 @@ export const readFile = async (
     // Utiliser Vercel Blob Storage en production
     const blobPath = subDir ? `${subDir}/${fileName}` : fileName
     try {
-      const blob = await get(blobPath)
-      return await blob.text()
+      // Utiliser head pour obtenir les métadonnées du blob (inclut l'URL)
+      const blobMetadata = await head(blobPath)
+      // Utiliser downloadUrl pour les blobs privés (URL signée)
+      const downloadUrl = blobMetadata.downloadUrl || blobMetadata.url
+      // Faire un fetch sur l'URL pour obtenir le contenu
+      const response = await fetch(downloadUrl)
+      if (!response.ok) {
+        return null
+      }
+      return await response.text()
     } catch (error) {
       // Si le fichier n'existe pas, retourner null
-      if (error instanceof Error && error.message.includes("404")) {
+      if (error instanceof Error && (error.message.includes("404") || error.message.includes("BlobNotFound"))) {
         return null
       }
       throw error
@@ -136,7 +146,7 @@ export const fileExists = async (
     // Utiliser Vercel Blob Storage en production
     const blobPath = subDir ? `${subDir}/${fileName}` : fileName
     try {
-      await get(blobPath)
+      await head(blobPath)
       return true
     } catch (error) {
       return false
