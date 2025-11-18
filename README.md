@@ -63,6 +63,15 @@ yarn playwright install chromium
    # Clerk Authentication
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
+
+   # Browserless.io (pour la production sur Vercel)
+   # ⚠️ IMPORTANT : Collez votre clé API Browserless.io ici
+   # Obtenez votre clé sur https://www.browserless.io/
+   # Format : BROWSERLESS_API_KEY=votre-cle-api-ici
+   BROWSERLESS_API_KEY=
+
+   # Pour tester Browserless.io en local, ajoutez :
+   # USE_BROWSERLESS=true
    ```
 
 ### 4.1. Configuration de Clerk
@@ -236,10 +245,12 @@ chmod -R 755 data
 ### Playwright ne fonctionne pas
 
 **En développement local :**
+
 - Assurez-vous que les navigateurs Playwright sont installés : `yarn playwright install chromium`
 - Vérifiez que vous avez les permissions nécessaires pour exécuter les navigateurs
 
 **En production (Vercel) :**
+
 - Le navigateur Chromium est installé automatiquement lors du déploiement via `vercel.json`
 - La configuration utilise les arguments `--no-sandbox` et `--disable-setuid-sandbox` pour la compatibilité serverless
 - Si vous rencontrez des erreurs :

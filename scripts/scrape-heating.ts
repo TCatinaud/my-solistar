@@ -1,4 +1,4 @@
-import { chromium, type Browser, type Page } from "playwright"
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -54,30 +54,42 @@ export const scrapeHeatingData = async (
   password: string
 ): Promise<HeatingData> => {
   let browser: Browser | null = null
+  let context: BrowserContext | null = null
 
   try {
-    // Configuration pour Vercel selon le tutoriel Zenrows
-    const browserOptions: Parameters<typeof chromium.launch>[0] = {
-      headless: true,
+    // Utiliser Browserless.io si :
+    // 1. On est sur Vercel ET on a la clé API
+    // 2. OU si USE_BROWSERLESS=true (pour tester en local)
+    const useBrowserless =
+      (!!process.env.VERCEL && !!process.env.BROWSERLESS_API_KEY) ||
+      (process.env.USE_BROWSERLESS === "true" && !!process.env.BROWSERLESS_API_KEY)
+
+    if (useBrowserless) {
+      // Connexion à Browserless.io via WebSocket
+      // ⚠️ IMPORTANT : Collez votre clé API Browserless.io dans la variable d'environnement BROWSERLESS_API_KEY
+      const browserlessApiKey = process.env.BROWSERLESS_API_KEY
+      if (!browserlessApiKey) {
+        throw new Error("BROWSERLESS_API_KEY n'est pas définie. Ajoutez-la dans vos variables d'environnement.")
+      }
+
+      // URL de connexion Browserless.io (WebSocket pour Playwright)
+      // Format : wss://production-<region>.browserless.io/chromium/playwright?token=VOTRE_CLE_API
+      // Note: Pour Playwright avec chromium.connect(), on doit utiliser /chromium/playwright dans le chemin
+      // Documentation: https://docs.browserless.io/overview/connection-urls
+      const browserlessUrl = `wss://production-sfo.browserless.io/chromium/playwright?token=${browserlessApiKey}`
+
+      browser = await chromium.connect(browserlessUrl)
+    } else {
+      // Utiliser Playwright local en développement
+      const browserOptions: Parameters<typeof chromium.launch>[0] = {
+        headless: true,
+      }
+
+      browser = await chromium.launch(browserOptions)
     }
 
-    // Sur Vercel, ajouter les arguments nécessaires
-    if (process.env.VERCEL) {
-      browserOptions.args = [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-        "--disable-gpu",
-      ]
-    }
-
-    browser = await chromium.launch(browserOptions)
-
-    const context = await browser.newContext({
+    // Créer le contexte avec le user agent
+    context = await browser.newContext({
       userAgent: USER_AGENT,
     })
 
@@ -86,7 +98,7 @@ export const scrapeHeatingData = async (
     // Navigate to login page
     await page.goto("https://my.solisart.fr/", {
       waitUntil: "networkidle",
-      timeout: 30000,
+      timeout: 60000, // Augmenter le timeout pour Browserless.io
     })
 
     // Verify page title
@@ -101,7 +113,8 @@ export const scrapeHeatingData = async (
     await page.click('input[name="connexion"]')
 
     // Wait for navigation after login
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000) // Augmenter le délai
+    await page.waitForLoadState("networkidle", { timeout: 30000 })
 
     // Get parameters area
     const areaBox = await page.locator("#td-parametrage-mode")
@@ -210,14 +223,31 @@ export const scrapeHeatingData = async (
     const filePath = path.resolve(dataDir, `heating.json`)
     fs.writeFileSync(filePath, JSON.stringify(serverData, null, 2))
 
-    await context.close()
+    // Fermer le contexte avant de retourner
+    if (context) {
+      await context.close()
+      context = null // Éviter la double fermeture dans finally
+    }
+
     return serverData
   } catch (error) {
     console.error("Error scraping heating data:", error)
     throw error
   } finally {
+    // Nettoyer les ressources
+    if (context) {
+      try {
+        await context.close()
+      } catch (e) {
+        console.error("Error closing context:", e)
+      }
+    }
     if (browser) {
-      await browser.close()
+      try {
+        await browser.close()
+      } catch (e) {
+        console.error("Error closing browser:", e)
+      }
     }
   }
 }
