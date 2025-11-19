@@ -15,7 +15,7 @@ docker-compose up -d
 cp backend/.env.example backend/.env
 
 # Entrer dans le container
-docker exec -it home_energy_php bash
+docker exec -it my_solisart_php bash
 
 # Installer & configurer
 composer install

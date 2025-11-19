@@ -8,7 +8,7 @@ import { ClerkProvider, UserButton } from "@clerk/nextjs";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Home Energy - Chauffage Solaire",
+  title: "MySolisArt - Chauffage Solaire",
   description: "Application de suivi des données de chauffage solaire SolisArt",
 };
 
@@ -20,7 +20,7 @@ const Header = () => {
           href="/"
           className="text-xl font-semibold hover:opacity-80 transition-opacity"
         >
-          Solar Home
+          MySolisArt
         </Link>
         <nav className="flex items-center gap-4">
           <Link href="/evolution">

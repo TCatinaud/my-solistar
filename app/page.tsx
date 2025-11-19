@@ -152,7 +152,7 @@ export default function Home() {
   return (
     <main className="container mx-auto p-6 space-y-6">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Home Energy</h1>
+        <h1 className="text-4xl font-bold mb-2">MySolisArt</h1>
         <p className="text-muted-foreground">
           Données de chauffage solaire - Dernière mise à jour :{" "}
           {formatDate(data.date)}

@@ -1,4 +1,4 @@
-# Home Energy - Application de Suivi du Chauffage Solaire
+# MySolisArt - Application de Suivi du Chauffage Solaire
 
 Application Next.js simple et moderne pour récupérer et afficher les données de chauffage solaire depuis my.solisart.fr.
 
@@ -22,7 +22,7 @@ Application Next.js simple et moderne pour récupérer et afficher les données 
 
 ```bash
 git clone <votre-repo-url>
-cd home-energy
+cd my-solisart
 ```
 
 ### 2. Installer les dépendances
@@ -97,7 +97,7 @@ L'application sera accessible sur **http://localhost:3000**
 ## 📁 Structure du Projet
 
 ```
-home-energy/
+my-solisart/
 ├── app/
 │   ├── api/
 │   │   └── heating/

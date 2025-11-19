@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "home-energy",
+      name: "my-solisart",
       script: "node_modules/next/dist/bin/next",
       args: "start",
       cwd: process.cwd(),
