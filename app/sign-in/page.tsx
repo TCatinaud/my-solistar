@@ -1,17 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import { Field } from "@/components/molecules/field";
 
 const SignInPage = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -30,129 +24,107 @@ const SignInPage = () => {
     }
   }, [isLoaded, isSignedIn, router, searchParams]);
 
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!isLoaded) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await signIn.create({
+          identifier: email,
+          password,
+        });
+
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          const redirectUrl = searchParams.get("redirect_url");
+          router.push(redirectUrl || "/");
+        } else {
+          setError("Une erreur est survenue lors de la connexion");
+        }
+      } catch (err: any) {
+        setError(err.errors?.[0]?.message || "Erreur lors de la connexion");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoaded, signIn, email, password, setActive, searchParams, router]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(e as any);
+      }
+    },
+    [handleSubmit]
+  );
+
   if (!isLoaded) {
     return null;
   }
 
   if (isSignedIn) {
-    return null;
+    router.push("/");
+    return;
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!isLoaded) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
-
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        const redirectUrl = searchParams.get("redirect_url");
-        router.push(redirectUrl || "/");
-      } else {
-        setError("Une erreur est survenue lors de la connexion");
-      }
-    } catch (err: any) {
-      setError(err.errors?.[0]?.message || "Erreur lors de la connexion");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e as any);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Connexion
-          </CardTitle>
-          <CardDescription className="text-center">
-            Connectez-vous à votre compte MySolisArt
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={handleSubmit}
-            onKeyDown={handleKeyDown}
-            className="space-y-4"
+    <main className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="p-5">
+        <Image src="/logo.svg" alt="MySolisArt" width={50} height={50} />
+      </div>
+      <div className="flex flex-col flex-1 max-w-md w-full m-auto justify-center">
+        <h1 className="h3-like mb-xs">Connexion</h1>
+
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={handleKeyDown}
+          className="space-y-4"
+        >
+          <Field
+            label="Email"
+            id="email"
+            type="email"
+            placeholder="votre@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="email"
+            aria-label="Adresse email"
+            aria-required="true"
+          />
+
+          <Field
+            label="Mot de passe"
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="current-password"
+            aria-label="Mot de passe"
+            aria-required="true"
+          />
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !isLoaded}
+            aria-label="Se connecter"
           >
-            {error && (
-              <div
-                className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md"
-                role="alert"
-                aria-live="polite"
-              >
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="votre@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="email"
-                aria-label="Adresse email"
-                aria-required="true"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Mot de passe
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="current-password"
-                aria-label="Mot de passe"
-                aria-required="true"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !isLoaded}
-              aria-label="Se connecter"
-            >
-              {isLoading ? "Connexion..." : "Se connecter"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            {isLoading ? "Connexion..." : "Se connecter"}
+          </Button>
+        </form>
+      </div>
+    </main>
   );
 };
 

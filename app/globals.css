@@ -56,4 +56,14 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .h1-like {
+    @apply text-2xl lg:text-4xl font-bold;
+  }
+  .h2-like {
+    @apply text-xl lg:text-3xl font-bold;
+  }
+  .h3-like {
+    @apply text-lg lg:text-2xl font-bold;
+  }
 }

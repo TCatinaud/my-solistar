@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import Link from "next/link";
+import { Nunito } from "next/font/google";
 import "./globals.css";
-import { Button } from "@/components/ui/button";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { ConditionalHeader } from "@/components/conditional-header";
 
-const inter = Inter({ subsets: ["latin"] });
+const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" });
 
 export const metadata: Metadata = {
   title: "MySolisArt - Chauffage Solaire",
@@ -19,12 +17,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider
-      signInUrl="/sign-in"
-      signInFallbackRedirectUrl="/"
-    >
+    <ClerkProvider signInUrl="/sign-in" signInFallbackRedirectUrl="/">
       <html lang="fr">
-        <body className={inter.className}>
+        <body className={`${nunito.variable} font-primary`}>
           <ConditionalHeader />
           {children}
         </body>
