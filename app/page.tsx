@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CardData } from "@/components/card-data";
+import { WeatherCard } from "@/components/weather-card";
 import { useFormatDate } from "@/hooks/use-format-date";
 import {
   WeatherSunny24Regular,
@@ -12,11 +13,12 @@ import {
   Fire24Regular,
   Temperature24Regular,
   WeatherCloudy24Regular,
+  WeatherRain24Regular,
+  WeatherMoon24Regular,
 } from "@fluentui/react-icons";
 
 interface HeatingData {
   date: string;
-  fetchedAt?: string;
   data: {
     panels: {
       hotSensor: number;
@@ -47,40 +49,100 @@ interface HeatingData {
   };
 }
 
-const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
-const STORAGE_KEY = "heating-data-cache";
+interface WeatherData {
+  date: string;
+  current: {
+    temperature: number;
+    weatherCode: number;
+    windSpeed: number;
+    windDirection: number;
+  };
+  today?: {
+    tempMin: number;
+    tempMax: number;
+  };
+  hourly?: {
+    time: string;
+    temperature: number;
+    weatherCode: number;
+  }[];
+  daily: {
+    date: string;
+    tempMin: number;
+    tempMax: number;
+    weatherCode: number;
+    windSpeed: number;
+    windDirection: number;
+  }[];
+}
 
-const getCachedData = (): HeatingData | null => {
-  if (typeof window === "undefined") return null;
-  try {
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (!cached) return null;
-    const data: HeatingData = JSON.parse(cached);
-    return data;
-  } catch {
-    return null;
+const getWeatherIcon = (weatherCode: number, isNight: boolean = false) => {
+  // Codes WMO
+  // 0-1 : Ciel clair / Principalement clair
+  // 2-3 : Partiellement nuageux
+  // 45-48 : Brouillard
+  // 51-67 : Pluie (légère à forte)
+  // 71-77 : Neige
+  // 80-82 : Averses de pluie
+  // 85-86 : Averses de neige
+  // 95-99 : Orage
+
+  if (isNight && (weatherCode === 0 || weatherCode === 1)) {
+    return <WeatherMoon24Regular className="text-slate-300" />;
   }
+
+  if (weatherCode === 0 || weatherCode === 1) {
+    return <WeatherSunny24Regular className="text-yellow-400" />;
+  }
+
+  if (weatherCode >= 2 && weatherCode <= 3) {
+    return <WeatherCloudy24Regular className="text-slate-300" />;
+  }
+
+  if (weatherCode >= 45 && weatherCode <= 48) {
+    return <WeatherCloudy24Regular className="text-slate-400" />;
+  }
+
+  if (
+    (weatherCode >= 51 && weatherCode <= 67) ||
+    (weatherCode >= 80 && weatherCode <= 82)
+  ) {
+    return <WeatherRain24Regular className="text-slate-600" />;
+  }
+
+  if (weatherCode >= 71 && weatherCode <= 77) {
+    return <WeatherCloudy24Regular className="text-slate-200" />;
+  }
+
+  if (weatherCode >= 85 && weatherCode <= 86) {
+    return <WeatherCloudy24Regular className="text-slate-300" />;
+  }
+
+  if (weatherCode >= 95 && weatherCode <= 99) {
+    return <WeatherRain24Regular className="text-slate-700" />;
+  }
+
+  return <WeatherCloudy24Regular className="text-slate-300" />;
 };
 
-const setCachedData = (data: HeatingData): void => {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // Ignore storage errors
-  }
+const getWindDirection = (degrees: number): string => {
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const index = Math.round(degrees / 45) % 8;
+  return directions[index];
 };
 
-const isDataRecent = (data: HeatingData | null): boolean => {
-  if (!data || !data.date) {
-    return false;
-  }
+const isNightTime = (): boolean => {
+  const hour = new Date().getHours();
+  return hour < 6 || hour >= 20;
+};
 
-  const dataDate = new Date(data.date).getTime();
-  const now = Date.now();
-  const age = now - dataDate;
-
-  return age < CACHE_DURATION_MS;
+const formatForecastDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 };
 
 export default function Home() {
@@ -90,6 +152,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherRefreshing, setWeatherRefreshing] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
   const formatDate = useFormatDate();
 
   const fetchData = useCallback(async (forceRefresh: boolean = false) => {
@@ -100,7 +166,8 @@ export default function Home() {
         setLoading(true);
       }
       setError(null);
-      const response = await fetch("/api/heating");
+      const url = forceRefresh ? "/api/heating?force=true" : "/api/heating";
+      const response = await fetch(url);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -110,12 +177,7 @@ export default function Home() {
       }
 
       const result = await response.json();
-      const dataWithTimestamp: HeatingData = {
-        ...result,
-        fetchedAt: new Date().toISOString(),
-      };
-      setData(dataWithTimestamp);
-      setCachedData(dataWithTimestamp);
+      setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
       console.error("Error fetching heating data:", err);
@@ -125,26 +187,54 @@ export default function Home() {
     }
   }, []);
 
+  const fetchWeatherData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      try {
+        if (forceRefresh) {
+          setWeatherRefreshing(true);
+        } else {
+          setWeatherLoading(true);
+        }
+        setWeatherError(null);
+        const url = forceRefresh ? "/api/weather?force=true" : "/api/weather";
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error ||
+              "Erreur lors de la récupération des données météo"
+          );
+        }
+
+        const result = await response.json();
+        setWeatherData(result);
+      } catch (err) {
+        setWeatherError(
+          err instanceof Error ? err.message : "Une erreur est survenue"
+        );
+        console.error("Error fetching weather data:", err);
+      } finally {
+        setWeatherLoading(false);
+        setWeatherRefreshing(false);
+      }
+    },
+    []
+  );
+
   const handleRefresh = useCallback(() => {
     fetchData(true);
-  }, [fetchData]);
+    fetchWeatherData(true);
+  }, [fetchData, fetchWeatherData]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
       return;
     }
 
-    const cachedData = getCachedData();
-
-    if (cachedData && isDataRecent(cachedData)) {
-      // Utiliser les données en cache si elles sont récentes
-      setData(cachedData);
-      setLoading(false);
-    } else {
-      // Fetcher de nouvelles données
-      fetchData(false);
-    }
-  }, [isLoaded, isSignedIn, fetchData]);
+    fetchData(false);
+    fetchWeatherData(false);
+  }, [isLoaded, isSignedIn, fetchData, fetchWeatherData]);
 
   if (!isLoaded || !isSignedIn) {
     return null;
@@ -157,11 +247,13 @@ export default function Home() {
           <h1 className="text-4xl font-bold">MySolisArt</h1>
           <Button
             onClick={handleRefresh}
-            disabled={refreshing || loading}
+            disabled={
+              refreshing || loading || weatherRefreshing || weatherLoading
+            }
             variant="outline"
             aria-label="Actualiser les données"
           >
-            {refreshing ? (
+            {refreshing || weatherRefreshing ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
                 Actualisation...
@@ -322,6 +414,22 @@ export default function Home() {
           loading={loading}
           error={!!error}
         />
+
+        {/* Météo */}
+        <div className="col-span-full">
+          <WeatherCard
+            current={weatherData?.current}
+            today={weatherData?.today}
+            hourly={weatherData?.hourly}
+            daily={weatherData?.daily}
+            loading={weatherLoading}
+            error={!!weatherError}
+            getWeatherIcon={getWeatherIcon}
+            getWindDirection={getWindDirection}
+            isNightTime={isNightTime}
+            formatForecastDate={formatForecastDate}
+          />
+        </div>
       </div>
     </main>
   );

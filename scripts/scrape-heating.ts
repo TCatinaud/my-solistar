@@ -216,7 +216,7 @@ export const scrapeHeatingData = async (
     // Save to data directory
     // En local : utilise data/
     // En production : utilise Vercel Blob Storage
-    await writeFile("heating.json", JSON.stringify(serverData, null, 2))
+    await writeFile("data-now.json", JSON.stringify(serverData, null, 2))
 
     // Fermer le contexte avant de retourner
     if (context) {
