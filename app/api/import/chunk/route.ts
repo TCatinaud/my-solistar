@@ -81,46 +81,65 @@ export async function POST(request: NextRequest) {
 
       await writeFile(fileName, JSON.stringify(initialData, null, 2), "solistar")
       
-      // Sur Vercel, attendre un peu pour que le blob soit disponible pour les prochains chunks
-      // On attend seulement si on est en environnement serverless
-      if (process.env.VERCEL || process.env.BLOB_READ_WRITE_TOKEN) {
-        await new Promise(resolve => setTimeout(resolve, 500)) // 500ms de délai
+      // Vérifier que le fichier a bien été écrit avant de retourner la réponse
+      // Cette vérification est importante sur Vercel où le blob peut avoir un délai de propagation
+      let fileVerified = false
+      const maxVerificationAttempts = 10
+      for (let attempt = 0; attempt < maxVerificationAttempts; attempt++) {
+        const exists = await fileExists(fileName, "solistar")
+        if (exists) {
+          // Vérifier qu'on peut aussi le lire
+          const content = await readFile(fileName, "solistar")
+          if (content) {
+            fileVerified = true
+            break
+          }
+        }
+        // Attendre un peu avant de réessayer (délai progressif)
+        if (attempt < maxVerificationAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)))
+        }
+      }
+      
+      if (!fileVerified) {
+        console.error(`Fichier ${fileName} non vérifié après ${maxVerificationAttempts} tentatives`)
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Erreur lors de la vérification de la sauvegarde du fichier",
+          },
+          { status: 500 }
+        )
       }
       
       return NextResponse.json({
         success: true,
-        message: `Chunk ${chunkIndex + 1} reçu`,
+        message: `Chunk ${chunkIndex + 1} reçu et vérifié`,
         chunkIndex,
       })
     }
 
     // Pour les chunks suivants, lire le fichier existant, fusionner et sauvegarder
-    // Sur Vercel, il peut y avoir un délai de propagation après l'écriture
-    // On fait plusieurs tentatives avec des délais progressifs
+    // Attendre que le fichier soit disponible (avec retry)
     let existingContent: string | null = null
-    const maxRetries = 5
-    const baseDelay = 200 // 200ms
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const maxReadAttempts = 10
+    for (let attempt = 0; attempt < maxReadAttempts; attempt++) {
       existingContent = await readFile(fileName, "solistar")
       if (existingContent) {
         break
       }
-      
-      // Si ce n'est pas la dernière tentative, attendre avant de réessayer
-      if (attempt < maxRetries - 1) {
-        const delay = baseDelay * (attempt + 1) // Délai progressif : 200ms, 400ms, 600ms, 800ms
-        console.log(`Fichier non trouvé, tentative ${attempt + 1}/${maxRetries}, attente de ${delay}ms...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
+      // Attendre avant de réessayer (délai progressif : 100ms, 200ms, 300ms, etc.)
+      if (attempt < maxReadAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)))
       }
     }
     
     if (!existingContent) {
-      console.error(`Fichier ${fileName} introuvable après ${maxRetries} tentatives`)
+      console.error(`Fichier ${fileName} introuvable après ${maxReadAttempts} tentatives (chunk ${chunkIndex})`)
       return NextResponse.json(
         { 
           success: false, 
-          message: `Fichier introuvable après ${maxRetries} tentatives. Le chunk précédent n'a peut-être pas été sauvegardé correctement. Veuillez recommencer l'import.`,
+          message: `Fichier introuvable après ${maxReadAttempts} tentatives. Le chunk précédent n'a peut-être pas été sauvegardé. Veuillez recommencer l'import.`,
           chunkIndex,
         },
         { status: 400 }
@@ -167,10 +186,45 @@ export async function POST(request: NextRequest) {
     }
 
     await writeFile(fileName, JSON.stringify(existingData, null, 2), "solistar")
+    
+    // Vérifier que le fichier a bien été écrit avant de retourner la réponse
+    let fileVerified = false
+    const maxVerificationAttempts = 10
+    for (let attempt = 0; attempt < maxVerificationAttempts; attempt++) {
+      const content = await readFile(fileName, "solistar")
+      if (content) {
+        // Vérifier que les données sont bien présentes (au moins une clé de jour)
+        try {
+          const parsed = JSON.parse(content)
+          if (Object.keys(parsed).length > 1 || parsed._metadata) {
+            fileVerified = true
+            break
+          }
+        } catch {
+          // Continue to retry
+        }
+      }
+      // Attendre un peu avant de réessayer (délai progressif)
+      if (attempt < maxVerificationAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100 * (attempt + 1)))
+      }
+    }
+    
+    if (!fileVerified) {
+      console.error(`Fichier ${fileName} non vérifié après ${maxVerificationAttempts} tentatives (chunk ${chunkIndex})`)
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Erreur lors de la vérification de la sauvegarde du fichier",
+          chunkIndex,
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Chunk ${chunkIndex + 1} traité`,
+      message: `Chunk ${chunkIndex + 1} traité et vérifié`,
       chunkIndex,
       isComplete: isLastChunk,
     })

@@ -307,32 +307,74 @@ export default function ImportPage() {
         const processedChunk = processRowsToChunk(rows);
         const isLastChunk = i + chunkSize >= lines.length;
 
-        // Envoyer le chunk à l'API
-        const response = await fetch("/api/import/chunk", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fileName,
-            month: monthInfo?.month || "",
-            year: monthInfo?.year || 0,
-            monthIndex: monthInfo?.monthIndex || 0,
-            chunkIndex,
-            isLastChunk,
-            data: processedChunk,
-            confirmReplace: chunkIndex === 0 ? confirmReplace : undefined,
-          }),
-        });
+        // Envoyer le chunk à l'API avec retry en cas d'échec
+        let chunkSent = false;
+        const maxRetries = 3;
+        let lastError: Error | null = null;
 
-        if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ message: "Erreur inconnue" }));
-          throw new Error(
-            errorData.message ||
-              `Erreur lors de l'envoi du chunk ${chunkIndex + 1}`
-          );
+        for (let retry = 0; retry < maxRetries && !chunkSent; retry++) {
+          try {
+            const response = await fetch("/api/import/chunk", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                fileName,
+                month: monthInfo?.month || "",
+                year: monthInfo?.year || 0,
+                monthIndex: monthInfo?.monthIndex || 0,
+                chunkIndex,
+                isLastChunk,
+                data: processedChunk,
+                confirmReplace: chunkIndex === 0 ? confirmReplace : undefined,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response
+                .json()
+                .catch(() => ({ message: "Erreur inconnue" }));
+              lastError = new Error(
+                errorData.message ||
+                  `Erreur lors de l'envoi du chunk ${chunkIndex + 1}`
+              );
+              
+              // Si c'est une erreur 400 (fichier introuvable), attendre un peu plus avant de réessayer
+              if (response.status === 400 && retry < maxRetries - 1) {
+                const delay = 1000 * (retry + 1); // 1s, 2s, 3s
+                console.log(`Erreur 400, nouvelle tentative dans ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+              }
+              
+              throw lastError;
+            }
+
+            // Vérifier que la réponse indique un succès
+            const responseData = await response.json();
+            if (!responseData.success) {
+              lastError = new Error(responseData.message || "Erreur inconnue");
+              if (retry < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500 * (retry + 1)));
+                continue;
+              }
+              throw lastError;
+            }
+
+            chunkSent = true;
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error("Erreur inconnue");
+            if (retry < maxRetries - 1) {
+              const delay = 500 * (retry + 1); // 500ms, 1000ms, 1500ms
+              console.log(`Erreur lors de l'envoi du chunk ${chunkIndex + 1}, nouvelle tentative dans ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+        }
+
+        if (!chunkSent && lastError) {
+          throw lastError;
         }
 
         chunkIndex++;
@@ -341,12 +383,6 @@ export default function ImportPage() {
         if (totalChunks > 1) {
           const progress = Math.round((chunkIndex / totalChunks) * 100);
           setSuccessMessage(`Traitement en cours... ${progress}%`);
-        }
-
-        // Ajouter un petit délai entre les chunks pour laisser le temps au blob storage
-        // de se synchroniser (surtout important sur Vercel)
-        if (!isLastChunk && chunkIndex < totalChunks) {
-          await new Promise(resolve => setTimeout(resolve, 300)); // 300ms de délai
         }
       }
 
