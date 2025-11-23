@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Field } from "@/components/molecules/field";
@@ -122,6 +123,16 @@ const SignInPage = () => {
           >
             {isLoading ? "Connexion..." : "Se connecter"}
           </Button>
+
+          <div className="text-center mt-4">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+              aria-label="Réinitialiser le mot de passe"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
         </form>
       </div>
     </main>

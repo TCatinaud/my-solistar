@@ -242,34 +242,46 @@ export default function Home() {
 
   return (
     <main className="container mx-auto p-6 space-y-6">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-4xl font-bold">MySolisArt</h1>
-          <Button
-            onClick={handleRefresh}
-            disabled={
-              refreshing || loading || weatherRefreshing || weatherLoading
-            }
-            variant="outline"
-            aria-label="Actualiser les données"
-          >
-            {refreshing || weatherRefreshing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                Actualisation...
-              </>
-            ) : (
-              "Actualiser"
-            )}
-          </Button>
-        </div>
+      <div className="flex items-center justify-between mb-md">
         {data && (
           <p className="text-muted-foreground">
             Données de chauffage solaire - Dernière mise à jour :{" "}
             {formatDate(data.date)}
           </p>
         )}
+        <Button
+          onClick={handleRefresh}
+          disabled={
+            refreshing || loading || weatherRefreshing || weatherLoading
+          }
+          variant="outline"
+          aria-label="Actualiser les données"
+        >
+          {refreshing || weatherRefreshing ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+              Actualisation...
+            </>
+          ) : (
+            "Actualiser"
+          )}
+        </Button>
       </div>
+
+      {/* Météo */}
+      <WeatherCard
+        current={weatherData?.current}
+        today={weatherData?.today}
+        hourly={weatherData?.hourly}
+        daily={weatherData?.daily}
+        loading={weatherLoading}
+        error={!!weatherError}
+        getWeatherIcon={getWeatherIcon}
+        getWindDirection={getWindDirection}
+        isNightTime={isNightTime}
+        formatForecastDate={formatForecastDate}
+        className="mb-lg"
+      />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Panneaux solaires */}
@@ -414,22 +426,6 @@ export default function Home() {
           loading={loading}
           error={!!error}
         />
-
-        {/* Météo */}
-        <div className="col-span-full">
-          <WeatherCard
-            current={weatherData?.current}
-            today={weatherData?.today}
-            hourly={weatherData?.hourly}
-            daily={weatherData?.daily}
-            loading={weatherLoading}
-            error={!!weatherError}
-            getWeatherIcon={getWeatherIcon}
-            getWindDirection={getWindDirection}
-            isNightTime={isNightTime}
-            formatForecastDate={formatForecastDate}
-          />
-        </div>
       </div>
     </main>
   );

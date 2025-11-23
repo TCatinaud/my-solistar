@@ -42,6 +42,7 @@ type WeatherCardProps = {
   getWindDirection: (degrees: number) => string;
   isNightTime: () => boolean;
   formatForecastDate: (dateString: string) => string;
+  className?: string;
 };
 
 const formatHour = (timeString: string): string => {
@@ -89,6 +90,7 @@ export const WeatherCard = React.forwardRef<HTMLDivElement, WeatherCardProps>(
       getWindDirection,
       isNightTime,
       formatForecastDate,
+      className,
     },
     ref
   ) => {
@@ -96,8 +98,8 @@ export const WeatherCard = React.forwardRef<HTMLDivElement, WeatherCardProps>(
 
     if (error) {
       return (
-        <Card ref={ref}>
-          <CardContent className="p-6">
+        <Card ref={ref} className={className}>
+          <CardContent>
             <div className="text-center text-muted-foreground">Erreur</div>
           </CardContent>
         </Card>
@@ -105,7 +107,7 @@ export const WeatherCard = React.forwardRef<HTMLDivElement, WeatherCardProps>(
     }
 
     return (
-      <Card ref={ref}>
+      <Card ref={ref} className={className}>
         <CardHeader>
           <CardTitle>Météo</CardTitle>
         </CardHeader>
