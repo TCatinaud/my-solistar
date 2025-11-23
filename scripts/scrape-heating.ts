@@ -1,5 +1,4 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright"
-import { writeFile } from "@/lib/blob-storage"
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -213,10 +212,8 @@ export const scrapeHeatingData = async (
       },
     }
 
-    // Save to data directory
-    // En local : utilise data/
-    // En production : utilise Vercel Blob Storage
-    await writeFile("data-now.json", JSON.stringify(serverData, null, 2))
+    // Note: L'écriture du fichier est gérée par la route API qui appelle cette fonction
+    // Cela permet de préserver les données météo existantes
 
     // Fermer le contexte avant de retourner
     if (context) {

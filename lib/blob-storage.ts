@@ -7,12 +7,22 @@ import { put, head, list, del } from "@vercel/blob"
  * Vérifie la présence du token Blob Storage ou de la variable VERCEL
  */
 const isServerless = (): boolean => {
+  // Vérifier d'abord les indicateurs d'environnement Vercel
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    return true
+  }
+  
   // Si on a le token Blob Storage, on est sur Vercel
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     return true
   }
-  // Sinon, vérifier les autres indicateurs
-  return !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME
+  
+  // Vérifier les autres environnements serverless
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return true
+  }
+  
+  return false
 }
 
 /**
@@ -25,16 +35,43 @@ export const writeFile = async (
   data: string,
   subDir: string = ""
 ): Promise<void> => {
-  if (isServerless()) {
+  const serverless = isServerless()
+  console.log(`writeFile: isServerless=${serverless}, fileName=${fileName}, hasToken=${!!process.env.BLOB_READ_WRITE_TOKEN}`)
+  
+  if (serverless) {
+    // Vérifier que le token est disponible
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      const errorMsg = "BLOB_READ_WRITE_TOKEN is not set. Cannot write to blob storage."
+      console.error(errorMsg)
+      throw new Error(errorMsg)
+    }
+    
     // Utiliser Vercel Blob Storage en production
     // Note: Dans @vercel/blob v2.0.0, access ne peut être que 'public'
     // Les fichiers sont protégés par l'authentification Clerk
     const blobPath = subDir ? `${subDir}/${fileName}` : fileName
-    await put(blobPath, data, {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true, // Permettre l'écrasement des fichiers existants
-    })
+    console.log(`Writing blob: ${blobPath} (size: ${data.length} bytes)`)
+    try {
+      const result = await put(blobPath, data, {
+        access: "public",
+        addRandomSuffix: false,
+        allowOverwrite: true, // Permettre l'écrasement des fichiers existants
+      })
+      console.log(`Successfully wrote blob: ${blobPath}`, { url: result.url })
+    } catch (error) {
+      console.error(`Error writing blob ${blobPath}:`, error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack : undefined
+      console.error("Write error details:", {
+        blobPath,
+        errorMessage,
+        errorStack,
+        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+      })
+      throw new Error(
+        `Failed to write blob ${blobPath}: ${errorMessage}. Check that BLOB_READ_WRITE_TOKEN is correctly configured.`
+      )
+    }
   } else {
     // Utiliser le système de fichiers en local
     const dataDir = path.resolve(process.cwd(), "data", subDir)
@@ -42,7 +79,9 @@ export const writeFile = async (
       fs.mkdirSync(dataDir, { recursive: true })
     }
     const filePath = path.join(dataDir, fileName)
+    console.log(`Writing file: ${filePath} (size: ${data.length} bytes)`)
     fs.writeFileSync(filePath, data)
+    console.log(`Successfully wrote file: ${filePath}`)
   }
 }
 
@@ -56,6 +95,12 @@ export const readFile = async (
   subDir: string = ""
 ): Promise<string | null> => {
   if (isServerless()) {
+    // Vérifier que le token est disponible
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.warn("BLOB_READ_WRITE_TOKEN is not set. Cannot read from blob storage. Returning null.")
+      return null
+    }
+    
     // Utiliser Vercel Blob Storage en production
     const blobPath = subDir ? `${subDir}/${fileName}` : fileName
     try {
@@ -63,17 +108,34 @@ export const readFile = async (
       const blobMetadata = await head(blobPath)
       // Utiliser downloadUrl pour les blobs privés (URL signée)
       const downloadUrl = blobMetadata.downloadUrl || blobMetadata.url
+      if (!downloadUrl) {
+        console.warn(`No download URL found for blob: ${blobPath}`)
+        return null
+      }
       // Faire un fetch sur l'URL pour obtenir le contenu
       const response = await fetch(downloadUrl)
       if (!response.ok) {
+        console.warn(`Failed to fetch blob content: ${response.status} ${response.statusText}`)
         return null
       }
       return await response.text()
     } catch (error) {
       // Si le fichier n'existe pas, retourner null
-      if (error instanceof Error && (error.message.includes("404") || error.message.includes("BlobNotFound"))) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorString = errorMessage.toLowerCase()
+      
+      if (
+        errorString.includes("404") ||
+        errorString.includes("blobnotfound") ||
+        errorString.includes("not found") ||
+        errorString.includes("does not exist")
+      ) {
+        console.log(`Blob not found (expected): ${blobPath}`)
         return null
       }
+      
+      // Logger l'erreur pour le diagnostic
+      console.error(`Error reading blob ${blobPath}:`, error)
       throw error
     }
   } else {

@@ -93,7 +93,14 @@ export async function GET(request: NextRequest) {
       weather: existingData.weather, // Préserver les données météo
     }
 
-    await writeFile("data-now.json", JSON.stringify(dataToSave, null, 2))
+    console.log("Saving heating data to data-now.json...")
+    try {
+      await writeFile("data-now.json", JSON.stringify(dataToSave, null, 2))
+      console.log("Successfully saved heating data to data-now.json")
+    } catch (error) {
+      console.error("Failed to save heating data:", error)
+      throw error // Re-throw pour que l'erreur soit capturée par le catch global
+    }
 
     return NextResponse.json(
       {
@@ -109,10 +116,20 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error("Error in heating API route:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    // Logger plus de détails pour le diagnostic
+    console.error("Error details:", {
+      message: errorMessage,
+      stack: errorStack,
+      name: error instanceof Error ? error.name : undefined,
+    })
+    
     return NextResponse.json(
       {
         error: "Erreur lors de la récupération des données",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined,
       },
       { status: 500 }
     )
