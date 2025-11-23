@@ -247,7 +247,12 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { success: false, message: "Non autorisé" },
-        { status: 401 }
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       )
     }
 
@@ -264,6 +269,7 @@ export async function POST(request: NextRequest) {
         {
           status: 429,
           headers: {
+            "Content-Type": "application/json",
             "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
           },
         }
@@ -277,7 +283,12 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { success: false, message: "Aucun fichier fourni" },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       )
     }
 
@@ -290,7 +301,12 @@ export async function POST(request: NextRequest) {
     if (rows.length === 0) {
       return NextResponse.json(
         { success: false, message: "Aucune donnée valide trouvée dans le CSV" },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       )
     }
 
@@ -299,7 +315,12 @@ export async function POST(request: NextRequest) {
     if (!monthInfo) {
       return NextResponse.json(
         { success: false, message: "Impossible de déterminer le mois à partir des données" },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       )
     }
 
@@ -318,7 +339,12 @@ export async function POST(request: NextRequest) {
           fileName,
           month,
         },
-        { status: 200 }
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       )
     }
 
@@ -337,25 +363,52 @@ export async function POST(request: NextRequest) {
     // Sauvegarder le fichier JSON
     // En local : utilise data/solistar/
     // En production : utilise Vercel Blob Storage
-    await writeFile(fileName, JSON.stringify(processedData, null, 2), "solistar")
+    console.log(`Saving file: ${fileName} to solistar/`)
+    try {
+      await writeFile(fileName, JSON.stringify(processedData, null, 2), "solistar")
+      console.log(`Successfully saved file: ${fileName}`)
+    } catch (writeError) {
+      console.error("Error writing file:", writeError)
+      throw new Error(
+        `Erreur lors de la sauvegarde du fichier: ${writeError instanceof Error ? writeError.message : String(writeError)}`
+      )
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: `Fichier ${fileName} importé avec succès`,
-      fileName,
-      month,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Fichier ${fileName} importé avec succès`,
+        fileName,
+        month,
+      },
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
   } catch (error) {
     console.error("Error importing CSV:", error)
+    const errorMessage = error instanceof Error ? error.message : "Erreur lors de l'import du fichier"
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    console.error("Import error details:", {
+      message: errorMessage,
+      stack: errorStack,
+    })
+    
     return NextResponse.json(
       {
         success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Erreur lors de l'import du fichier",
+        message: errorMessage,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     )
   }
 }

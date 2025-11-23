@@ -158,7 +158,24 @@ export default function ImportPage() {
         body: formData,
       });
 
-      const data: ImportResponse = await response.json();
+      // Vérifier le Content-Type avant de parser le JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        // Si ce n'est pas du JSON, lire le texte pour voir l'erreur
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        throw new Error(
+          `Erreur serveur (${response.status}): ${text.substring(0, 200)}`
+        );
+      }
+
+      let data: ImportResponse;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error("Erreur lors de la lecture de la réponse du serveur");
+      }
 
       if (!response.ok) {
         throw new Error(data.message || "Erreur lors de l'import");

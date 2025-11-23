@@ -49,7 +49,36 @@ const SignInForm = () => {
           setError("Une erreur est survenue lors de la connexion");
         }
       } catch (err: any) {
-        setError(err.errors?.[0]?.message || "Erreur lors de la connexion");
+        // Extraire le message d'erreur de Clerk
+        let errorMessage = "Erreur lors de la connexion";
+
+        if (err?.errors && Array.isArray(err.errors) && err.errors.length > 0) {
+          // Clerk retourne un tableau d'erreurs
+          errorMessage = err.errors[0].message || errorMessage;
+        } else if (err?.message) {
+          // Erreur avec un message direct
+          errorMessage = err.message;
+        } else if (typeof err === "string") {
+          // Erreur sous forme de string
+          errorMessage = err;
+        }
+
+        // Messages d'erreur plus conviviaux en français
+        if (
+          errorMessage.includes("form_identifier_not_found") ||
+          errorMessage.includes("not found")
+        ) {
+          errorMessage = "Aucun compte trouvé avec cet email";
+        } else if (
+          errorMessage.includes("form_password_incorrect") ||
+          errorMessage.includes("incorrect")
+        ) {
+          errorMessage = "Mot de passe incorrect";
+        } else if (errorMessage.includes("form_param_format_invalid")) {
+          errorMessage = "Format d'email invalide";
+        }
+
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -116,6 +145,16 @@ const SignInForm = () => {
             aria-label="Mot de passe"
             aria-required="true"
           />
+
+          {error && (
+            <div
+              className="p-3 text-sm text-red-800 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
+          )}
 
           <Button
             type="submit"
