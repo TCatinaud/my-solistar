@@ -1,39 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import Link from "next/link";
+import { Nunito } from "next/font/google";
 import "./globals.css";
-import { Button } from "@/components/ui/button";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
+import { ConditionalHeader } from "@/components/conditional-header";
 
-const inter = Inter({ subsets: ["latin"] });
+const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" });
 
 export const metadata: Metadata = {
   title: "MySolisArt - Chauffage Solaire",
   description: "Application de suivi des données de chauffage solaire SolisArt",
-};
-
-const Header = () => {
-  return (
-    <header className="border-b">
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link
-          href="/"
-          className="text-xl font-semibold hover:opacity-80 transition-opacity"
-        >
-          MySolisArt
-        </Link>
-        <nav className="flex items-center gap-4">
-          <Link href="/evolution">
-            <Button variant="outline">Évolution</Button>
-          </Link>
-          <Link href="/import">
-            <Button variant="outline">Import</Button>
-          </Link>
-          <UserButton afterSignOutUrl="/sign-in" />
-        </nav>
-      </div>
-    </header>
-  );
 };
 
 export default function RootLayout({
@@ -42,10 +17,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider signInUrl="/sign-in" signInFallbackRedirectUrl="/">
       <html lang="fr">
-        <body className={inter.className}>
-          <Header />
+        <body className={`${nunito.variable} font-primary`}>
+          <ConditionalHeader />
           {children}
         </body>
       </html>
