@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     const newData = await scrapeHeatingData(id, password)
 
     // Lire le fichier existant pour préserver les données météo si elles existent
-    let existingData: DataNowFile = {}
+    let existingData: Partial<DataNowFile> = {}
     const existingContent = await readFile("data-now.json")
     if (existingContent) {
       try {

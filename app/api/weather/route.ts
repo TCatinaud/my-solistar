@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Lire le fichier existant pour préserver les données de chauffage
-    let existingData: DataNowFile = {};
+    let existingData: Partial<DataNowFile> = {};
     const existingContent = await readFile("data-now.json");
     if (existingContent) {
       try {

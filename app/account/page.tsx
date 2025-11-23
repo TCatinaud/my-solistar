@@ -5,7 +5,6 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/molecules/field";
-import Image from "next/image";
 
 const ComptePage = () => {
   const { user, isLoaded: isUserLoaded } = useUser();
