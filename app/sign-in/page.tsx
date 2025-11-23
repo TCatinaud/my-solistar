@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSignIn, useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +10,7 @@ import { Field } from "@/components/molecules/field";
 
 export const dynamic = "force-dynamic";
 
-const SignInPage = () => {
+const SignInForm = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
   const router = useRouter();
@@ -138,6 +138,26 @@ const SignInPage = () => {
         </form>
       </div>
     </main>
+  );
+};
+
+const SignInPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 px-4">
+          <div className="p-5">
+            <Image src="/logo.svg" alt="MySolisArt" width={50} height={50} />
+          </div>
+          <div className="flex flex-col flex-1 max-w-md w-full m-auto justify-center">
+            <h1 className="h3-like mb-xs">Connexion</h1>
+            <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+          </div>
+        </main>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 };
 
