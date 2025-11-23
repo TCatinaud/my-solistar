@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { parseCSVChunk, processRowsToChunk } from "@/lib/csv-parser";
 import {
   Card,
   CardContent,
@@ -145,6 +146,20 @@ export default function ImportPage() {
   const uploadFile = async (file: File, confirmReplace: boolean) => {
     setStatus("uploading");
 
+    // Vérifier la taille du fichier (25-30 Mo)
+    const fileSizeMB = file.size / (1024 * 1024);
+    const useChunkedUpload = fileSizeMB > 10; // Utiliser l'upload par chunks si > 10 Mo
+
+    if (useChunkedUpload) {
+      // Traitement par chunks pour les gros fichiers
+      await uploadFileChunked(file, confirmReplace);
+    } else {
+      // Traitement normal pour les petits fichiers
+      await uploadFileNormal(file, confirmReplace);
+    }
+  };
+
+  const uploadFileNormal = async (file: File, confirmReplace: boolean) => {
     const formData = new FormData();
     formData.append("file", file);
     if (confirmReplace) {
@@ -190,6 +205,147 @@ export default function ImportPage() {
 
       setStatus("success");
       setSuccessMessage(data.message || "Import réussi");
+      setPendingFile(null);
+      setExistingFileName(null);
+      // Recharger la liste des fichiers
+      loadFiles();
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      setPendingFile(null);
+    }
+  };
+
+  const uploadFileChunked = async (file: File, confirmReplace: boolean) => {
+    try {
+      setStatus("processing");
+
+      // Lire le fichier CSV
+      const csvContent = await file.text();
+      const lines = csvContent.split("\n").filter((line) => line.trim());
+
+      if (lines.length < 2) {
+        throw new Error("Le fichier CSV est invalide : pas assez de lignes");
+      }
+
+      // Parser les headers
+      const headers = lines[1].split(";").map((h) => h.trim());
+      const requiredColumns = [
+        "Date",
+        "Tcapt",
+        "TcaptF",
+        "TbalS",
+        "TbalA",
+        "TpoeleB",
+        "TdepC",
+        "TretC",
+        "Text",
+        "TZ1",
+        "SOL",
+        "APP",
+        "TconsECS",
+        "chdr1",
+        "Tcons1",
+      ];
+
+      const missingColumns = requiredColumns.filter(
+        (col) => !headers.includes(col)
+      );
+      if (missingColumns.length > 0) {
+        throw new Error(
+          `Colonnes manquantes dans le CSV : ${missingColumns.join(", ")}`
+        );
+      }
+
+      // Déterminer le mois à partir des premières lignes
+      const firstChunkLines = lines.slice(2, Math.min(100, lines.length));
+      const { monthInfo: firstMonthInfo } = parseCSVChunk(
+        firstChunkLines,
+        headers
+      );
+
+      if (!firstMonthInfo) {
+        throw new Error(
+          "Impossible de déterminer le mois à partir des données"
+        );
+      }
+
+      const monthInfo = firstMonthInfo;
+      const fileName = `${monthInfo.month}-solistar.json`;
+
+      // Vérifier si le fichier existe avant de commencer
+      const checkResponse = await fetch("/api/import/files");
+      if (checkResponse.ok) {
+        const filesData = await checkResponse.json();
+        const fileExists = filesData.files?.some(
+          (f: any) => f.fileName === fileName
+        );
+
+        if (fileExists && !confirmReplace) {
+          setExistingFileName(fileName);
+          setShowConfirmDialog(true);
+          setStatus("idle");
+          return;
+        }
+      }
+
+      // Traiter le fichier par chunks (par lots de 1000 lignes)
+      const chunkSize = 1000;
+      let chunkIndex = 0;
+      const totalChunks = Math.ceil((lines.length - 2) / chunkSize);
+
+      for (let i = 2; i < lines.length; i += chunkSize) {
+        const chunkLines = lines.slice(i, i + chunkSize);
+        const { rows } = parseCSVChunk(chunkLines, headers);
+
+        if (rows.length === 0) {
+          chunkIndex++;
+          continue;
+        }
+
+        // Transformer les données
+        const processedChunk = processRowsToChunk(rows);
+        const isLastChunk = i + chunkSize >= lines.length;
+
+        // Envoyer le chunk à l'API
+        const response = await fetch("/api/import/chunk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName,
+            month: monthInfo?.month || "",
+            year: monthInfo?.year || 0,
+            monthIndex: monthInfo?.monthIndex || 0,
+            chunkIndex,
+            isLastChunk,
+            data: processedChunk,
+            confirmReplace: chunkIndex === 0 ? confirmReplace : undefined,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: "Erreur inconnue" }));
+          throw new Error(
+            errorData.message ||
+              `Erreur lors de l'envoi du chunk ${chunkIndex + 1}`
+          );
+        }
+
+        chunkIndex++;
+
+        // Mettre à jour le statut pour montrer la progression
+        if (totalChunks > 1) {
+          const progress = Math.round((chunkIndex / totalChunks) * 100);
+          setSuccessMessage(`Traitement en cours... ${progress}%`);
+        }
+      }
+
+      setStatus("success");
+      setSuccessMessage(`Fichier ${fileName} importé avec succès`);
       setPendingFile(null);
       setExistingFileName(null);
       // Recharger la liste des fichiers
