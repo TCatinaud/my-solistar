@@ -425,13 +425,16 @@ export default function EvolutionPage() {
                         formatTimestamp(value as string)
                       }
                       formatter={(value: unknown, name: string) => {
+                        const label =
+                          seriesLabels[name as keyof typeof seriesLabels] ||
+                          name;
                         if (name === "boilerActive") {
-                          return [value === 100 ? "On" : "Off", ""];
+                          return [value === 100 ? "On" : "Off", label];
                         }
                         if (typeof value === "number") {
-                          return [`${value.toFixed(1)} °C`, ""];
+                          return [`${value.toFixed(1)} °C`, label];
                         }
-                        return [String(value), ""];
+                        return [String(value), label];
                       }}
                     />
                     <Legend

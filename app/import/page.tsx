@@ -342,6 +342,12 @@ export default function ImportPage() {
           const progress = Math.round((chunkIndex / totalChunks) * 100);
           setSuccessMessage(`Traitement en cours... ${progress}%`);
         }
+
+        // Ajouter un petit délai entre les chunks pour laisser le temps au blob storage
+        // de se synchroniser (surtout important sur Vercel)
+        if (!isLastChunk && chunkIndex < totalChunks) {
+          await new Promise(resolve => setTimeout(resolve, 300)); // 300ms de délai
+        }
       }
 
       setStatus("success");

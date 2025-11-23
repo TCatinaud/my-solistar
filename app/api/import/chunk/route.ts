@@ -80,6 +80,13 @@ export async function POST(request: NextRequest) {
       }
 
       await writeFile(fileName, JSON.stringify(initialData, null, 2), "solistar")
+      
+      // Sur Vercel, attendre un peu pour que le blob soit disponible pour les prochains chunks
+      // On attend seulement si on est en environnement serverless
+      if (process.env.VERCEL || process.env.BLOB_READ_WRITE_TOKEN) {
+        await new Promise(resolve => setTimeout(resolve, 500)) // 500ms de délai
+      }
+      
       return NextResponse.json({
         success: true,
         message: `Chunk ${chunkIndex + 1} reçu`,
@@ -88,10 +95,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Pour les chunks suivants, lire le fichier existant, fusionner et sauvegarder
-    const existingContent = await readFile(fileName, "solistar")
+    // Sur Vercel, il peut y avoir un délai de propagation après l'écriture
+    // On fait plusieurs tentatives avec des délais progressifs
+    let existingContent: string | null = null
+    const maxRetries = 5
+    const baseDelay = 200 // 200ms
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      existingContent = await readFile(fileName, "solistar")
+      if (existingContent) {
+        break
+      }
+      
+      // Si ce n'est pas la dernière tentative, attendre avant de réessayer
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * (attempt + 1) // Délai progressif : 200ms, 400ms, 600ms, 800ms
+        console.log(`Fichier non trouvé, tentative ${attempt + 1}/${maxRetries}, attente de ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
     if (!existingContent) {
+      console.error(`Fichier ${fileName} introuvable après ${maxRetries} tentatives`)
       return NextResponse.json(
-        { success: false, message: "Fichier introuvable. Veuillez recommencer l'import." },
+        { 
+          success: false, 
+          message: `Fichier introuvable après ${maxRetries} tentatives. Le chunk précédent n'a peut-être pas été sauvegardé correctement. Veuillez recommencer l'import.`,
+          chunkIndex,
+        },
         { status: 400 }
       )
     }
