@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Field } from "@/components/molecules/field";
 
+export const dynamic = "force-dynamic";
+
 const SignInPage = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
