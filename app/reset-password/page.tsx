@@ -111,15 +111,15 @@ const ResetPasswordPage = () => {
           <h1 className="h3-like mb-xs">Mot de passe réinitialisé</h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Votre mot de passe a été réinitialisé avec succès. Vous allez être
-            redirigé vers la page d'accueil...
+            redirigé vers la page d&apos;accueil...
           </p>
           <div className="text-center">
             <Link
               href="/"
               className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
-              aria-label="Aller à la page d'accueil"
+              aria-label="Aller à la page d&apos;accueil"
             >
-              Aller à la page d'accueil
+              Aller à la page d&apos;accueil
             </Link>
           </div>
         </div>
