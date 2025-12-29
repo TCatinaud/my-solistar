@@ -21,7 +21,7 @@ export default function RootLayout({
       <html lang="fr">
         <body className={`${nunito.variable} font-primary`}>
           <ConditionalHeader />
-          {children}
+          <main className="container mx-auto">{children}</main>
         </body>
       </html>
     </ClerkProvider>

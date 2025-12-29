@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CardData } from "@/components/card-data";
 import { WeatherCard } from "@/components/weather-card";
@@ -17,7 +15,7 @@ import {
   WeatherMoon24Regular,
 } from "@fluentui/react-icons";
 
-interface HeatingData {
+type HeatingData = {
   date: string;
   data: {
     panels: {
@@ -47,9 +45,9 @@ interface HeatingData {
       indoor: number;
     };
   };
-}
+};
 
-interface WeatherData {
+type WeatherData = {
   date: string;
   current: {
     temperature: number;
@@ -74,7 +72,7 @@ interface WeatherData {
     windSpeed: number;
     windDirection: number;
   }[];
-}
+};
 
 const getWeatherIcon = (weatherCode: number, isNight: boolean = false) => {
   // Codes WMO
@@ -146,8 +144,6 @@ const formatForecastDate = (dateString: string): string => {
 };
 
 export default function Home() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const router = useRouter();
   const [data, setData] = useState<HeatingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -228,20 +224,12 @@ export default function Home() {
   }, [fetchData, fetchWeatherData]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
-      return;
-    }
-
     fetchData(false);
     fetchWeatherData(false);
-  }, [isLoaded, isSignedIn, fetchData, fetchWeatherData]);
-
-  if (!isLoaded || !isSignedIn) {
-    return null;
-  }
+  }, [fetchData, fetchWeatherData]);
 
   return (
-    <main className="container mx-auto p-6 space-y-6">
+    <>
       <div className="flex items-center justify-between mb-md">
         {data && (
           <p className="text-muted-foreground">
@@ -427,6 +415,6 @@ export default function Home() {
           error={!!error}
         />
       </div>
-    </main>
+    </>
   );
 }
