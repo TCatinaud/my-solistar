@@ -241,16 +241,19 @@ export default function EvolutionPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleLoadData = () => {
+  const handleLoadData = useCallback(() => {
     fetchData();
-  };
+  }, [fetchData]);
 
-  const handleLegendClick = (dataKey: string) => {
-    setVisibleSeries((prev) => ({
-      ...prev,
-      [dataKey]: !prev[dataKey as keyof typeof prev],
-    }));
-  };
+  const handleLegendClick = useCallback(
+    (dataKey: string) => {
+      setVisibleSeries((prev) => ({
+        ...prev,
+        [dataKey]: !prev[dataKey as keyof typeof prev],
+      }));
+    },
+    [setVisibleSeries]
+  );
 
   const seriesColors = {
     hotSensor: "#ef4444", // red
@@ -281,7 +284,7 @@ export default function EvolutionPage() {
   }
 
   return (
-    <main className="container mx-auto p-6 space-y-6">
+    <>
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Évolution des données</h1>
         <p className="text-muted-foreground">
@@ -632,6 +635,6 @@ export default function EvolutionPage() {
             </CardHeader>
           </Card>
         )}
-    </main>
+    </>
   );
 }
